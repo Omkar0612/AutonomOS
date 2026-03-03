@@ -1,4 +1,4 @@
-"""
+""" 
 AutonomOS Multi-Agent Collaboration System
 
 A comprehensive framework for building coordinated AI agent teams.
