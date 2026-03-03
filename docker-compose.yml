@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  agent:
+    build: .
+    container_name: autonomos
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+      - ./src/skills:/app/src/skills
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - agent-network
+    depends_on:
+      - chromadb
+      - redis
+
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: autonomos-chromadb
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data/chromadb:/chroma/chroma
+    networks:
+      - agent-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: autonomos-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data/redis:/data
+    networks:
+      - agent-network
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: autonomos-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./data/ollama:/root/.ollama
+    networks:
+      - agent-network
+
+  # Optional: Web UI
+  ui:
+    build: ./src/ui
+    container_name: autonomos-ui
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8080
+    networks:
+      - agent-network
+    depends_on:
+      - agent
+
+networks:
+  agent-network:
+    driver: bridge
+
+volumes:
+  chromadb-data:
+  redis-data:
+  ollama-data:
