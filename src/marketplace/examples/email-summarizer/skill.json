@@ -1,0 +1,77 @@
+{
+  "name": "email-summarizer",
+  "version": "1.0.0",
+  "description": "Summarizes emails using AI and extracts action items",
+  "longDescription": "This skill connects to your email inbox, reads unread messages, uses an LLM to generate concise summaries, and extracts actionable items. Perfect for morning briefings and inbox management.",
+  "author": {
+    "name": "AutonomOS Community",
+    "email": "community@autonomos.dev",
+    "url": "https://github.com/Omkar0612/AutonomOS"
+  },
+  "license": "MIT",
+  "category": "productivity",
+  "tags": ["email", "summarization", "ai", "productivity"],
+  "entrypoint": "main.py",
+  "dependencies": {
+    "python": ">=3.10",
+    "packages": [
+      "imapclient>=2.3.0",
+      "openai>=1.0.0",
+      "beautifulsoup4>=4.12.0"
+    ]
+  },
+  "permissions": [
+    "network",
+    "api_keys",
+    "external_services"
+  ],
+  "inputs": [
+    {
+      "name": "email_address",
+      "type": "string",
+      "description": "Email address to monitor",
+      "required": true
+    },
+    {
+      "name": "imap_server",
+      "type": "string",
+      "description": "IMAP server address",
+      "required": true,
+      "default": "imap.gmail.com"
+    },
+    {
+      "name": "max_emails",
+      "type": "number",
+      "description": "Maximum number of emails to process",
+      "default": 10
+    }
+  ],
+  "outputs": [
+    {
+      "name": "summaries",
+      "type": "array",
+      "description": "Array of email summaries"
+    },
+    {
+      "name": "action_items",
+      "type": "array",
+      "description": "Extracted action items"
+    }
+  ],
+  "examples": [
+    {
+      "title": "Summarize last 5 emails",
+      "input": {
+        "email_address": "user@example.com",
+        "max_emails": 5
+      },
+      "output": {
+        "summaries": ["Email 1 summary...", "Email 2 summary..."],
+        "action_items": ["Reply to John", "Review proposal"]
+      }
+    }
+  ],
+  "homepage": "https://autonomos.dev/skills/email-summarizer",
+  "repository": "https://github.com/autonomos-skills/email-summarizer",
+  "icon": "📧"
+}

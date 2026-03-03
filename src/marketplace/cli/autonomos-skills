@@ -1,0 +1,178 @@
+#!/usr/bin/env python3
+"""
+AutonomOS Skills CLI - Manage skills from the marketplace
+"""
+import click
+import requests
+import json
+import subprocess
+from pathlib import Path
+from rich.console import Console
+from rich.table import Table
+from rich.progress import Progress
+
+console = Console()
+MARKETPLACE_API = "http://localhost:8001"
+SKILLS_DIR = Path.home() / ".autonomos" / "skills"
+
+@click.group()
+def cli():
+    """AutonomOS Skills Marketplace CLI"""
+    SKILLS_DIR.mkdir(parents=True, exist_ok=True)
+
+@cli.command()
+@click.option('--category', help='Filter by category')
+@click.option('--tag', help='Filter by tag')
+def list(category, tag):
+    """List available skills"""
+    params = {}
+    if category:
+        params['category'] = category
+    if tag:
+        params['tag'] = tag
+    
+    response = requests.get(f"{MARKETPLACE_API}/skills", params=params)
+    skills = response.json()
+    
+    table = Table(title="Available Skills")
+    table.add_column("Name", style="cyan")
+    table.add_column("Description", style="white")
+    table.add_column("Category", style="green")
+    table.add_column("Downloads", justify="right", style="magenta")
+    table.add_column("Rating", justify="right", style="yellow")
+    
+    for skill in skills:
+        table.add_row(
+            skill['name'],
+            skill['description'][:50] + "..." if len(skill['description']) > 50 else skill['description'],
+            skill['category'],
+            str(skill['downloads']),
+            f"{skill['rating']:.1f} ⭐"
+        )
+    
+    console.print(table)
+
+@cli.command()
+@click.argument('skill_name')
+def info(skill_name):
+    """Show detailed information about a skill"""
+    response = requests.get(f"{MARKETPLACE_API}/skills/{skill_name}")
+    if response.status_code == 404:
+        console.print(f"[red]Skill '{skill_name}' not found[/red]")
+        return
+    
+    skill = response.json()
+    
+    console.print(f"\n[bold cyan]{skill['name']}[/bold cyan] v{skill['version']}")
+    console.print(f"[dim]{skill['description']}[/dim]\n")
+    console.print(f"Category: [green]{skill['category']}[/green]")
+    console.print(f"Author: {skill['author_name']}")
+    console.print(f"Downloads: [magenta]{skill['downloads']:,}[/magenta]")
+    console.print(f"Rating: [yellow]{skill['rating']:.1f}/5.0[/yellow] ({skill['review_count']} reviews)")
+    console.print(f"\nTags: {', '.join(skill['tags'])}")
+    console.print(f"Repository: {skill['repository']}")
+
+@cli.command()
+@click.argument('skill_name')
+def install(skill_name):
+    """Install a skill from the marketplace"""
+    console.print(f"[cyan]Installing skill:[/cyan] {skill_name}")
+    
+    # Get skill info
+    response = requests.get(f"{MARKETPLACE_API}/skills/{skill_name}")
+    if response.status_code == 404:
+        console.print(f"[red]Skill '{skill_name}' not found[/red]")
+        return
+    
+    skill = response.json()
+    skill_dir = SKILLS_DIR / skill_name
+    
+    with Progress() as progress:
+        task = progress.add_task("[cyan]Cloning repository...", total=100)
+        
+        # Clone repository
+        try:
+            subprocess.run([
+                "git", "clone", skill['repository'], str(skill_dir)
+            ], check=True, capture_output=True)
+            progress.update(task, advance=50)
+            
+            # Install dependencies
+            manifest_path = skill_dir / "skill.json"
+            if manifest_path.exists():
+                with open(manifest_path) as f:
+                    manifest = json.load(f)
+                
+                if 'dependencies' in manifest and 'packages' in manifest['dependencies']:
+                    subprocess.run([
+                        "pip", "install"
+                    ] + manifest['dependencies']['packages'], check=True, capture_output=True)
+                progress.update(task, advance=50)
+            
+            # Track installation
+            requests.post(f"{MARKETPLACE_API}/skills/{skill_name}/install")
+            
+            console.print(f"[green]✓[/green] Successfully installed {skill_name}")
+            console.print(f"[dim]Installed to: {skill_dir}[/dim]")
+            
+        except subprocess.CalledProcessError as e:
+            console.print(f"[red]✗ Installation failed:[/red] {e}")
+
+@cli.command()
+@click.argument('skill_name')
+def uninstall(skill_name):
+    """Uninstall a skill"""
+    skill_dir = SKILLS_DIR / skill_name
+    
+    if not skill_dir.exists():
+        console.print(f"[red]Skill '{skill_name}' is not installed[/red]")
+        return
+    
+    import shutil
+    shutil.rmtree(skill_dir)
+    console.print(f"[green]✓[/green] Uninstalled {skill_name}")
+
+@cli.command()
+@click.argument('query')
+def search(query):
+    """Search for skills"""
+    response = requests.get(f"{MARKETPLACE_API}/search", params={'q': query})
+    skills = response.json()
+    
+    if not skills:
+        console.print(f"[yellow]No skills found matching '{query}'[/yellow]")
+        return
+    
+    console.print(f"\n[bold]Found {len(skills)} skills:[/bold]\n")
+    for skill in skills:
+        console.print(f"  • [cyan]{skill['name']}[/cyan] - {skill['description']}")
+
+@cli.command()
+def installed():
+    """List installed skills"""
+    if not SKILLS_DIR.exists():
+        console.print("[yellow]No skills installed[/yellow]")
+        return
+    
+    skills = [d.name for d in SKILLS_DIR.iterdir() if d.is_dir() and not d.name.startswith('.')]
+    
+    if not skills:
+        console.print("[yellow]No skills installed[/yellow]")
+        return
+    
+    console.print(f"\n[bold]Installed skills ({len(skills)}):[/bold]\n")
+    for skill in skills:
+        console.print(f"  • [green]{skill}[/green]")
+
+@cli.command()
+def categories():
+    """List all categories"""
+    response = requests.get(f"{MARKETPLACE_API}/categories")
+    cats = response.json()
+    
+    console.print("\n[bold]Available categories:[/bold]\n")
+    for cat in cats:
+        console.print(f"  • [green]{cat['name']}[/green] ({cat['count']} skills)")
+
+if __name__ == '__main__':
+    cli()
