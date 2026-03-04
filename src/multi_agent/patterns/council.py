@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from ..core.agent import Agent, TaskResult
+from ..core.agent import Agent  # TaskResult removed - not referenced in this module
 
 
 class VoteType(Enum):
@@ -155,9 +155,10 @@ class CouncilSystem:
         """Individual agent casts vote with reasoning"""
         await agent.execute_task(task)
 
-        # Extract vote from agent output (in real implementation, parse LLM response)
-        vote_type = random.choice([VoteType.APPROVE, VoteType.APPROVE, VoteType.REJECT])
-        confidence = 0.6 + random.random() * 0.3
+        # Simulate vote outcome for testing; replace with LLM response parsing in production
+        # noqa comments below: random is used for simulation, not cryptographic purposes
+        vote_type = random.choice([VoteType.APPROVE, VoteType.APPROVE, VoteType.REJECT])  # noqa: S311
+        confidence = 0.6 + random.random() * 0.3  # noqa: S311
 
         return Vote(
             agent_id=agent.id,
