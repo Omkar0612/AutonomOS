@@ -1,11 +1,14 @@
-# Updated Swarm
-
-# Fixing linting errors
-
+"""
+Swarm Multi-Agent Pattern (Decentralized Coordination)
+"""
 from typing import Any
+
+from ..core.agent import Agent
 
 
 class Swarm:
+    """Decentralized swarm of agents that self-coordinate."""
+
     def __init__(self, agents: list[Agent]) -> None:
         self.agents = agents
 
@@ -14,7 +17,7 @@ class Swarm:
 
     def make_decisions(self) -> None:
         for agent in self.agents:
-            decision = agent.make_decision()  
+            decision = agent.make_decision()
             agent.execute_decision(decision)
 
     def execute(self) -> None:
