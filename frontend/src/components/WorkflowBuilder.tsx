@@ -12,14 +12,15 @@ import ReactFlow, {
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Play, Save, Trash2, Sparkles } from 'lucide-react'
+import { Play, Save, Trash2, Sparkles, Settings as SettingsIcon } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
 import Sidebar from './Sidebar'
 import NodePanel from './NodePanel'
 import TemplatesPanel from './TemplatesPanel'
-import LoadingSpinner from './LoadingSpinner'
-import { executeWorkflow } from '../services/api'
+import { apiService } from '../services/api'
+import { useApiKeys } from '../contexts/ApiKeyContext'
 
 const initialNodes: Node[] = []
 const initialEdges: Edge[] = []
@@ -30,6 +31,7 @@ export default function WorkflowBuilder() {
   const [selectedNode, setSelectedNode] = useState<Node | null>(null)
   const [showTemplates, setShowTemplates] = useState(false)
   const [isExecuting, setIsExecuting] = useState(false)
+  const { getActiveKey } = useApiKeys()
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -74,13 +76,34 @@ export default function WorkflowBuilder() {
   }, [])
 
   const handleExecute = async () => {
+    // Check for API key
+    const activeKey = getActiveKey()
+    if (!activeKey) {
+      toast.error(
+        <div>
+          <div className="font-semibold">No API key configured</div>
+          <div className="text-sm mt-1">Please add an API key in Settings first</div>
+        </div>,
+        { duration: 5000 }
+      )
+      return
+    }
+
     if (nodes.length === 0) {
       toast.error('Add nodes to your workflow first!', { icon: '⚠️' })
       return
     }
 
     setIsExecuting(true)
-    const toastId = toast.loading('Executing workflow...', { icon: '🚀' })
+    const toastId = toast.loading(
+      <div>
+        <div>Executing workflow...</div>
+        <div className="text-xs mt-1 opacity-75">
+          Using {activeKey.provider} - {activeKey.model}
+        </div>
+      </div>,
+      { icon: '🚀' }
+    )
 
     try {
       const workflow = {
@@ -97,12 +120,36 @@ export default function WorkflowBuilder() {
         })),
       }
 
-      const result = await executeWorkflow(workflow)
-      toast.success('Workflow executed successfully!', { id: toastId, icon: '✅' })
+      const result = await apiService.executeWorkflow(workflow)
+      
+      toast.success(
+        <div>
+          <div className="font-semibold">Workflow executed successfully!</div>
+          <div className="text-xs mt-1">Processed {nodes.length} nodes</div>
+        </div>,
+        { id: toastId, icon: '✅' }
+      )
+      
       console.log('Workflow result:', result)
-    } catch (error) {
-      toast.error('Failed to execute workflow', { id: toastId, icon: '❌' })
-      console.error(error)
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || 'Unknown error'
+      
+      toast.error(
+        <div>
+          <div className="font-semibold">Failed to execute workflow</div>
+          <div className="text-xs mt-1">{errorMessage}</div>
+          {errorMessage.includes('API key') && (
+            <div className="text-xs mt-2">
+              <Link to="/settings" className="text-primary-600 underline">
+                Check your API key
+              </Link>
+            </div>
+          )}
+        </div>,
+        { id: toastId, icon: '❌', duration: 5000 }
+      )
+      
+      console.error('Workflow execution error:', error)
     } finally {
       setIsExecuting(false)
     }
@@ -136,6 +183,9 @@ export default function WorkflowBuilder() {
     toast.success('Template loaded!', { icon: '📋' })
   }
 
+  // Get active API key info
+  const activeKey = getActiveKey()
+
   return (
     <div className="flex flex-1 overflow-hidden">
       <motion.div
@@ -154,6 +204,25 @@ export default function WorkflowBuilder() {
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
+          {/* API Key Status */}
+          {activeKey ? (
+            <div className="glass-strong px-4 py-2 rounded-xl text-sm flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-slate-600 dark:text-slate-400">
+                {activeKey.provider === 'openrouter' ? '⭐ ' : ''}
+                {activeKey.provider.charAt(0).toUpperCase() + activeKey.provider.slice(1)}
+              </span>
+            </div>
+          ) : (
+            <Link
+              to="/settings"
+              className="glass-strong px-4 py-2 rounded-xl text-sm flex items-center gap-2 text-amber-600 hover:text-amber-700"
+            >
+              <SettingsIcon className="w-4 h-4" />
+              Setup API Key
+            </Link>
+          )}
+
           <motion.button
             onClick={handleSave}
             className="btn-secondary flex items-center gap-2 shadow-lg"
@@ -176,7 +245,7 @@ export default function WorkflowBuilder() {
           
           <motion.button
             onClick={handleExecute}
-            disabled={isExecuting}
+            disabled={isExecuting || !activeKey}
             className="btn-primary flex items-center gap-2 shadow-xl relative overflow-hidden"
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}

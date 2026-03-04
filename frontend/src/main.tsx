@@ -6,15 +6,18 @@ import './index.css'
 import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { WorkflowProvider } from './contexts/WorkflowContext'
+import { ApiKeyProvider } from './contexts/ApiKeyContext'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
-          <WorkflowProvider>
-            <App />
-          </WorkflowProvider>
+          <ApiKeyProvider>
+            <WorkflowProvider>
+              <App />
+            </WorkflowProvider>
+          </ApiKeyProvider>
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>
