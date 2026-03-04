@@ -5,7 +5,13 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from src.multi_agent import Agent, AgentConfig, CouncilSystem, HierarchicalTeam, SwarmSystem
+from src.multi_agent import (
+    Agent,
+    AgentConfig,
+    CouncilSystem,
+    HierarchicalTeam,
+    SwarmSystem,
+)
 
 app = FastAPI(title="AutonomOS Workflow API")
 
@@ -94,7 +100,8 @@ class WorkflowExecutor:
                     result = await council.decide("Evaluate workflow decision")
 
                 else:
-                    raise HTTPException(status_code=400, detail=f"Unknown pattern: {pattern}")
+                    msg = f"Unknown pattern: {pattern}"
+                    raise HTTPException(status_code=400, detail=msg)
 
                 return {"status": "completed", "result": result, "context": context}
 
