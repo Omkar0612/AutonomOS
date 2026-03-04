@@ -1,30 +1,50 @@
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
-import { motion } from 'framer-motion'
-import WorkflowBuilder from './components/WorkflowBuilder'
-import Header from './components/Header'
+import { AnimatePresence } from 'framer-motion'
+
+// Pages
+import LandingPage from './pages/LandingPage'
+import LoginPage from './pages/LoginPage'
+import SignupPage from './pages/SignupPage'
+import DashboardPage from './pages/DashboardPage'
+import WorkflowBuilderPage from './pages/WorkflowBuilderPage'
+import WorkflowsPage from './pages/WorkflowsPage'
+import TemplatesPage from './pages/TemplatesPage'
+import SettingsPage from './pages/SettingsPage'
+import AnalyticsPage from './pages/AnalyticsPage'
+
+// Components
+import ProtectedRoute from './components/ProtectedRoute'
+import { useAuth } from './contexts/AuthContext'
 import AnimatedBackground from './components/AnimatedBackground'
 
 function App() {
+  const { isAuthenticated } = useAuth()
+
   return (
-    <div className="h-screen flex flex-col overflow-hidden relative">
+    <div className="min-h-screen relative">
       <AnimatedBackground />
       
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <Header />
-      </motion.div>
-      
-      <motion.div
-        className="flex-1 overflow-hidden"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-      >
-        <WorkflowBuilder />
-      </motion.div>
+      <AnimatePresence mode="wait">
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={!isAuthenticated ? <LandingPage /> : <Navigate to="/dashboard" />} />
+          <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to="/dashboard" />} />
+          <Route path="/signup" element={!isAuthenticated ? <SignupPage /> : <Navigate to="/dashboard" />} />
+          
+          {/* Protected Routes */}
+          <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+          <Route path="/workflows" element={<ProtectedRoute><WorkflowsPage /></ProtectedRoute>} />
+          <Route path="/workflows/new" element={<ProtectedRoute><WorkflowBuilderPage /></ProtectedRoute>} />
+          <Route path="/workflows/:id" element={<ProtectedRoute><WorkflowBuilderPage /></ProtectedRoute>} />
+          <Route path="/templates" element={<ProtectedRoute><TemplatesPage /></ProtectedRoute>} />
+          <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+          
+          {/* 404 */}
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </AnimatePresence>
       
       <Toaster 
         position="top-right"
@@ -37,18 +57,6 @@ function App() {
             padding: '16px',
             borderRadius: '12px',
             boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
-          },
-          success: {
-            iconTheme: {
-              primary: '#10b981',
-              secondary: '#fff',
-            },
-          },
-          error: {
-            iconTheme: {
-              primary: '#ef4444',
-              secondary: '#fff',
-            },
           },
         }}
       />
