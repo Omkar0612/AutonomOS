@@ -6,7 +6,17 @@ import semver
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, HttpUrl
-from sqlalchemy import Boolean, Column, DateTime, Float, Integer, JSON, String, create_engine, func
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    Integer,
+    JSON,
+    String,
+    create_engine,
+    func,
+)
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 app = FastAPI(title="AutonomOS Skills Marketplace API", version="1.0.0")
