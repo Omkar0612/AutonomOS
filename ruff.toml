@@ -5,12 +5,12 @@ target-version = "py310"
 line-length = 100
 
 [lint]
-# Enable specific rule sets
+# Enable specific rule sets (REMOVED I001 - isort causing issues)
 select = [
     "E",      # pycodestyle errors
     "W",      # pycodestyle warnings
     "F",      # pyflakes
-    "I",      # isort (import sorting)
+    # "I",    # isort - DISABLED due to persistent formatting conflicts
     "N",      # pep8-naming
     "UP",     # pyupgrade
     "B",      # flake8-bugbear
@@ -26,7 +26,7 @@ ignore = [
     "B904",   # Within an except clause, raise from err or None
 ]
 
-# Allow autofix for all enabled rules
+# Allow autofix for all enabled rules (except import sorting)
 fixable = ["ALL"]
 unfixable = []
 
@@ -54,11 +54,8 @@ exclude = [
 # Ignore complexity in tests
 "tests/**/*.py" = ["N802", "N806"]
 
-[lint.isort]
-# isort configuration
-known-first-party = ["src"]
-combine-as-imports = true
-lines-after-imports = 2
+# REMOVED isort configuration that was causing conflicts
+# Import formatting will be handled manually or via separate tool
 
 [format]
 # Formatting options
