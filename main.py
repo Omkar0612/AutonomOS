@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""
-AutonomOS - 24/7 Autonomous AI Agent
-Main entry point for the agent
+"""AutonomOS - 24/7 Autonomous AI Agent
+
+Main entry point for the agent.
 """
 
 import asyncio
@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 from loguru import logger
+
 from src.agent.brain import AgentBrain
 from src.agent.scheduler import TaskScheduler
 from src.ui.backend.api import create_app
@@ -20,13 +21,13 @@ logger.remove()
 logger.add(
     sys.stdout,
     colorize=True,
-    format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>"
+    format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>",
 )
 logger.add(
     "data/logs/agent.log",
     rotation="100 MB",
     retention="30 days",
-    compression="zip"
+    compression="zip",
 )
 
 
@@ -39,74 +40,121 @@ class AutonomOS:
         self.scheduler = TaskScheduler(self.brain)
         self.app = create_app(self.brain)
         self.running = False
+        self.shutdown_event = asyncio.Event()
 
-    async def start(self):
+    async def start(self) -> None:
         """Start the agent"""
         logger.info("🚀 Starting AutonomOS...")
 
-        # Initialize components
-        await self.brain.initialize()
+        try:
+            # Initialize components
+            await self.brain.initialize()
 
-        # Start scheduler if enabled
-        if self.config.get("ENABLE_SCHEDULER", True):
-            self.scheduler.start()
-            logger.info("⏰ Task scheduler started")
+            # Start scheduler if enabled
+            if self.config.get("ENABLE_SCHEDULER", True):
+                self.scheduler.start()
+                logger.info("⏰ Task scheduler started")
 
-        # Start API server
-        import uvicorn
-        config = uvicorn.Config(
-            self.app,
-            host="0.0.0.0",
-            port=8080,
-            log_level="info"
-        )
-        server = uvicorn.Server(config)
+            # Start API server
+            import uvicorn
 
-        self.running = True
-        logger.success("✅ AutonomOS is running!")
-        logger.info("📊 Web interface: http://localhost:8080")
-        logger.info("📚 API docs: http://localhost:8080/docs")
+            config = uvicorn.Config(
+                self.app,
+                host=self.config.get("API_HOST", "0.0.0.0"),
+                port=self.config.get("API_PORT", 8080),
+                log_level="info",
+                access_log=True,
+            )
+            server = uvicorn.Server(config)
 
-        # Run server
-        await server.serve()
+            self.running = True
+            logger.success("✅ AutonomOS is running!")
+            logger.info(f"📊Web interface: http://localhost:{self.config.get('API_PORT', 8080)}")
+            logger.info(f"📚 API docs: http://localhost:{self.config.get('API_PORT', 8080)}/docs")
 
-    async def stop(self):
+            # Run server with shutdown event
+            await server.serve()
+
+        except Exception as e:
+            logger.exception(f"❌ Fatal error during startup: {e}")
+            raise
+
+    async def stop(self) -> None:
         """Stop the agent gracefully"""
+        if not self.running:
+            return
+
         logger.info("🛑 Stopping AutonomOS...")
         self.running = False
 
-        # Stop scheduler
-        if self.scheduler.is_running():
-            self.scheduler.stop()
+        try:
+            # Stop scheduler
+            if self.scheduler.is_running():
+                self.scheduler.stop()
+                logger.info("⏰ Task scheduler stopped")
 
-        # Save state
-        await self.brain.save_state()
+            # Save state
+            await self.brain.save_state()
 
-        logger.success("✅ AutonomOS stopped gracefully")
+            logger.success("✅ AutonomOS stopped gracefully")
 
-    def handle_signal(self, sig, frame):
-        """Handle shutdown signals"""
-        logger.warning(f"Received signal {sig}")
-        asyncio.create_task(self.stop())
+        except Exception as e:
+            logger.error(f"⚠️ Error during shutdown: {e}")
+
+    def setup_signal_handlers(self, loop: asyncio.AbstractEventLoop) -> None:
+        """Setup signal handlers for graceful shutdown"""
+
+        def signal_handler(sig: int) -> None:
+            logger.warning(f"🚨 Received signal {signal.Signals(sig).name}")
+            loop.create_task(self.stop())
+            self.shutdown_event.set()
+
+        # Register signal handlers
+        for sig in (signal.SIGTERM, signal.SIGINT):
+            loop.add_signal_handler(sig, lambda s=sig: signal_handler(s))
 
 
-async def main():
+async def main() -> None:
     """Main entry point"""
     agent = AutonomOS()
+    loop = asyncio.get_event_loop()
 
     # Setup signal handlers
-    signal.signal(signal.SIGINT, agent.handle_signal)
-    signal.signal(signal.SIGTERM, agent.handle_signal)
+    agent.setup_signal_handlers(loop)
 
     try:
         await agent.start()
     except KeyboardInterrupt:
+        logger.warning("⏹️ Keyboard interrupt received")
         await agent.stop()
     except Exception as e:
-        logger.exception(f"Fatal error: {e}")
+        logger.exception(f"❌ Fatal error: {e}")
         await agent.stop()
         sys.exit(1)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    # Check Python version
+    if sys.version_info < (3, 10):
+        logger.error("❌ Python 3.10+ required")
+        sys.exit(1)
+
+    try:
+        # Run with uvloop on Unix systems for better performance
+        if sys.platform != "win32":
+            try:
+                import uvloop
+
+                uvloop.install()
+                logger.info("⚡ uvloop installed for faster async performance")
+            except ImportError:
+                logger.debug("uvloop not available, using default asyncio")
+
+        # Run the application
+        asyncio.run(main())
+
+    except KeyboardInterrupt:
+        logger.info("👋 Goodbye!")
+    except Exception as e:
+        logger.exception(f"❌ Unhandled exception: {e}")
+        sys.exit(1)
