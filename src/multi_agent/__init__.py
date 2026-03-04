@@ -4,14 +4,7 @@ AutonomOS Multi-Agent Collaboration System.
 A comprehensive framework for building coordinated AI agent teams.
 """
 
-from .core.agent import (
-    Agent,
-    AgentConfig,
-    AgentMessage,
-    AgentRole,
-    AgentState,
-    TaskResult,
-)
+from .core.agent import Agent, AgentConfig, AgentMessage, AgentRole, AgentState, TaskResult
 from .patterns.council import CouncilDecision, CouncilSystem, Vote
 from .patterns.hierarchical import HierarchicalTeam
 from .patterns.swarm import Swarm as SwarmSystem

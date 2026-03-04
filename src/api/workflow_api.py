@@ -5,13 +5,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from src.multi_agent import (
-    Agent,
-    AgentConfig,
-    CouncilSystem,
-    HierarchicalTeam,
-    SwarmSystem,
-)
+from src.multi_agent import Agent, AgentConfig, CouncilSystem, HierarchicalTeam, SwarmSystem
 
 app = FastAPI(title="AutonomOS Workflow API")
 
@@ -93,7 +87,7 @@ class WorkflowExecutor:
 
                 elif pattern == "swarm":
                     swarm = SwarmSystem(agents=agents)
-                    result = swarm.execute()  # SwarmSystem is synchronous in this demo
+                    result = swarm.execute()
 
                 elif pattern == "council":
                     council = CouncilSystem(name="WorkflowCouncil", agents=agents)
