@@ -1,7 +1,8 @@
 import { X, Save, Sparkles } from 'lucide-react'
 import { Node } from 'reactflow'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useApiKeys, AI_PROVIDERS } from '../contexts/ApiKeyContext'
 
 interface NodePanelProps {
   node: Node
@@ -10,11 +11,30 @@ interface NodePanelProps {
 }
 
 export default function NodePanel({ node, onClose, onUpdate }: NodePanelProps) {
+  const { getActiveKey } = useApiKeys()
+  const activeKey = getActiveKey()
+  
   const [label, setLabel] = useState(node.data.label || '')
   const [agentType, setAgentType] = useState(node.data.agentType || 'single')
   const [pattern, setPattern] = useState(node.data.pattern || 'hierarchical')
-  const [model, setModel] = useState(node.data.model || 'llama-3.1-70b-versatile')
+  const [model, setModel] = useState(node.data.model || activeKey?.model || 'openai/gpt-4-turbo-preview')
   const [task, setTask] = useState(node.data.task || '')
+
+  // Update model when active key changes
+  useEffect(() => {
+    if (activeKey && !node.data.model) {
+      setModel(activeKey.model)
+    }
+  }, [activeKey, node.data.model])
+
+  // Get available models based on active provider
+  const getAvailableModels = () => {
+    if (!activeKey) {
+      return [{ value: 'openai/gpt-4-turbo-preview', label: 'GPT-4 Turbo (Configure API key in Settings)' }]
+    }
+    const provider = AI_PROVIDERS.find(p => p.id === activeKey.provider)
+    return provider?.models || []
+  }
 
   const handleSave = () => {
     const updatedNode = {
@@ -149,18 +169,25 @@ export default function NodePanel({ node, onClose, onUpdate }: NodePanelProps) {
               >
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                   AI Model
+                  {!activeKey && (
+                    <span className="ml-2 text-xs text-amber-600">(Configure in Settings)</span>
+                  )}
                 </label>
                 <select
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
                   className="input-field"
+                  disabled={!activeKey}
                 >
-                  <option value="llama-3.1-70b-versatile">🦙 Llama 3.1 70B (Groq)</option>
-                  <option value="mixtral-8x7b-32768">⚡ Mixtral 8x7B (Groq)</option>
-                  <option value="gpt-4-turbo-preview">🤖 GPT-4 Turbo</option>
-                  <option value="claude-3-opus-20240229">🔮 Claude 3 Opus</option>
-                  <option value="gemini-1.5-pro">✨ Gemini 1.5 Pro</option>
+                  {getAvailableModels().map(m => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
+                  ))}
                 </select>
+                {activeKey && (
+                  <p className="text-xs text-slate-500 mt-1">
+                    Using {activeKey.provider} API key
+                  </p>
+                )}
               </motion.div>
 
               {/* Task */}
