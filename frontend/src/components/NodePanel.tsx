@@ -1,6 +1,7 @@
-import { X } from 'lucide-react'
+import { X, Save, Sparkles } from 'lucide-react'
 import { Node } from 'reactflow'
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface NodePanelProps {
   node: Node
@@ -31,103 +32,177 @@ export default function NodePanel({ node, onClose, onUpdate }: NodePanelProps) {
   }
 
   return (
-    <div className="w-80 bg-white border-l border-gray-200 p-6 overflow-y-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-semibold text-gray-900">Node Settings</h2>
-        <button
-          onClick={onClose}
-          className="p-1 hover:bg-gray-100 rounded transition-colors"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Label
-          </label>
-          <input
-            type="text"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            placeholder="Node name"
-          />
+    <AnimatePresence>
+      <motion.div
+        initial={{ x: 320, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: 320, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        className="w-96 glass-strong border-l border-white/20 p-6 overflow-y-auto relative"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+          <motion.h2 
+            className="text-xl font-bold bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent flex items-center gap-2"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <Sparkles className="w-5 h-5 text-primary-600" />
+            Node Settings
+          </motion.h2>
+          <motion.button
+            onClick={onClose}
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+            whileHover={{ scale: 1.1, rotate: 90 }}
+            whileTap={{ scale: 0.9 }}
+          >
+            <X className="w-5 h-5" />
+          </motion.button>
         </div>
 
-        {node.type === 'agent' && (
-          <>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Agent Type
-              </label>
-              <select
-                value={agentType}
-                onChange={(e) => setAgentType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              >
-                <option value="single">Single Agent</option>
-                <option value="multi">Multi-Agent System</option>
-              </select>
-            </div>
+        <motion.div 
+          className="space-y-5"
+          initial="hidden"
+          animate="show"
+          variants={{
+            hidden: { opacity: 0 },
+            show: {
+              opacity: 1,
+              transition: {
+                staggerChildren: 0.1
+              }
+            }
+          }}
+        >
+          {/* Label */}
+          <motion.div
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              show: { opacity: 1, y: 0 }
+            }}
+          >
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+              Label
+            </label>
+            <input
+              type="text"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              className="input-field"
+              placeholder="Node name"
+            />
+          </motion.div>
 
-            {agentType === 'multi' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Pattern
+          {node.type === 'agent' && (
+            <>
+              {/* Agent Type */}
+              <motion.div
+                variants={{
+                  hidden: { opacity: 0, y: 20 },
+                  show: { opacity: 1, y: 0 }
+                }}
+              >
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                  Agent Type
                 </label>
                 <select
-                  value={pattern}
-                  onChange={(e) => setPattern(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  value={agentType}
+                  onChange={(e) => setAgentType(e.target.value)}
+                  className="input-field"
                 >
-                  <option value="hierarchical">Hierarchical Team</option>
-                  <option value="swarm">Swarm Intelligence</option>
-                  <option value="council">Council System</option>
+                  <option value="single">Single Agent</option>
+                  <option value="multi">Multi-Agent System</option>
                 </select>
-              </div>
-            )}
+              </motion.div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Model
-              </label>
-              <select
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              {/* Pattern (only for multi-agent) */}
+              <AnimatePresence>
+                {agentType === 'multi' && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                      Pattern
+                    </label>
+                    <select
+                      value={pattern}
+                      onChange={(e) => setPattern(e.target.value)}
+                      className="input-field"
+                    >
+                      <option value="hierarchical">🏢 Hierarchical Team</option>
+                      <option value="swarm">🐝 Swarm Intelligence</option>
+                      <option value="council">👥 Council System</option>
+                    </select>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Model */}
+              <motion.div
+                variants={{
+                  hidden: { opacity: 0, y: 20 },
+                  show: { opacity: 1, y: 0 }
+                }}
               >
-                <option value="llama-3.1-70b-versatile">Llama 3.1 70B (Groq)</option>
-                <option value="mixtral-8x7b-32768">Mixtral 8x7B (Groq)</option>
-                <option value="gpt-4-turbo-preview">GPT-4 Turbo</option>
-                <option value="claude-3-opus-20240229">Claude 3 Opus</option>
-                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-              </select>
-            </div>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                  AI Model
+                </label>
+                <select
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  className="input-field"
+                >
+                  <option value="llama-3.1-70b-versatile">🦙 Llama 3.1 70B (Groq)</option>
+                  <option value="mixtral-8x7b-32768">⚡ Mixtral 8x7B (Groq)</option>
+                  <option value="gpt-4-turbo-preview">🤖 GPT-4 Turbo</option>
+                  <option value="claude-3-opus-20240229">🔮 Claude 3 Opus</option>
+                  <option value="gemini-1.5-pro">✨ Gemini 1.5 Pro</option>
+                </select>
+              </motion.div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Task Description
-              </label>
-              <textarea
-                value={task}
-                onChange={(e) => setTask(e.target.value)}
-                rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                placeholder="What should this agent do?"
-              />
-            </div>
-          </>
-        )}
+              {/* Task */}
+              <motion.div
+                variants={{
+                  hidden: { opacity: 0, y: 20 },
+                  show: { opacity: 1, y: 0 }
+                }}
+              >
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                  Task Description
+                </label>
+                <textarea
+                  value={task}
+                  onChange={(e) => setTask(e.target.value)}
+                  rows={5}
+                  className="input-field resize-none"
+                  placeholder="What should this agent do?"
+                />
+              </motion.div>
+            </>
+          )}
 
-        <button
-          onClick={handleSave}
-          className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-        >
-          Save Changes
-        </button>
-      </div>
-    </div>
+          {/* Save Button */}
+          <motion.button
+            onClick={handleSave}
+            className="btn-primary w-full flex items-center justify-center gap-2"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              show: { opacity: 1, y: 0 }
+            }}
+          >
+            <Save className="w-5 h-5" />
+            Save Changes
+          </motion.button>
+        </motion.div>
+
+        {/* Decorative gradient */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-primary-500/5 to-transparent pointer-events-none" />
+      </motion.div>
+    </AnimatePresence>
   )
 }
