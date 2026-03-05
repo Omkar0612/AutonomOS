@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { X, Copy, FileText, FileSpreadsheet, File, FileJson, Table, Markdown, Sparkles } from 'lucide-react'
+import { X, Copy, FileText, FileSpreadsheet, File, FileJson, Table, Sparkles } from 'lucide-react'
 import { WorkflowExecutionResult } from '../services/api'
 import toast from 'react-hot-toast'
 import {
@@ -185,7 +185,7 @@ export default function ExecutionResultsPanel({ result, workflowName, onClose }:
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
-          <Markdown className="w-4 h-4" />
+          <FileText className="w-4 h-4" />
           Markdown
         </motion.button>
       </div>
