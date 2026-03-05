@@ -83,7 +83,18 @@ export default function Settings() {
 }
 
 function ApiKeysTab() {
-  const { keys, addKey, deleteKey, setActiveKey, activeKeyId } = useApiKeys()
+  const apiKeyContext = useApiKeys()
+  
+  // Add safety check
+  if (!apiKeyContext) {
+    return (
+      <div className="card">
+        <p>Loading API keys...</p>
+      </div>
+    )
+  }
+
+  const { keys = [], addKey, deleteKey, setActiveKey, activeKeyId } = apiKeyContext
   const [showAddKey, setShowAddKey] = useState(false)
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({})
   
@@ -226,7 +237,7 @@ function ApiKeysTab() {
         )}
 
         {/* API Keys List */}
-        {keys.length > 0 ? (
+        {keys && keys.length > 0 ? (
           <div className="space-y-4">
             {keys.map((key) => (
               <div
