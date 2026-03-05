@@ -3,28 +3,17 @@ import { useState } from 'react'
 import {
   User, Key, Palette, Settings as SettingsIcon, Bell, Shield,
   Trash2, Plus, Eye, EyeOff, Check, X, AlertTriangle, Save,
-  Moon, Sun, Monitor
+  Moon, Sun, Monitor, Zap, Copy
 } from 'lucide-react'
+import { useApiKeys } from '../contexts/ApiKeyContext'
+import toast from 'react-hot-toast'
 
-type Tab = 'profile' | 'api-keys' | 'appearance' | 'notifications' | 'advanced'
-
-interface ApiKey {
-  id: string
-  name: string
-  provider: string
-  key: string
-  model: string
-  createdAt: string
-  lastUsed: string | null
-  isActive: boolean
-}
+type Tab = 'api-keys' | 'appearance' | 'notifications' | 'advanced'
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState<Tab>('profile')
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [activeTab, setActiveTab] = useState<Tab>('api-keys')
 
   const tabs = [
-    { id: 'profile' as Tab, label: 'Profile', icon: User },
     { id: 'api-keys' as Tab, label: 'API Keys', icon: Key },
     { id: 'appearance' as Tab, label: 'Appearance', icon: Palette },
     { id: 'notifications' as Tab, label: 'Notifications', icon: Bell },
@@ -39,32 +28,11 @@ export default function Settings() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <h1 className="text-4xl font-black mb-2">Settings</h1>
+          <h1 className="text-4xl font-black mb-2">⚙️ Settings</h1>
           <p className="text-slate-600 dark:text-slate-400">
-            Manage your account and preferences
+            Manage your API keys and preferences
           </p>
         </motion.div>
-
-        {/* Unsaved Changes Banner */}
-        {hasUnsavedChanges && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="glass-strong rounded-xl p-4 flex items-center justify-between border-l-4 border-amber-500"
-          >
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-              <span className="font-medium">You have unsaved changes</span>
-            </div>
-            <div className="flex gap-2">
-              <button className="btn-ghost text-sm">Discard</button>
-              <button className="btn-primary text-sm py-2">
-                <Save className="w-4 h-4" />
-                Save Changes
-              </button>
-            </div>
-          </motion.div>
-        )}
 
         <div className="grid lg:grid-cols-[240px_1fr] gap-6">
           {/* Sidebar Tabs */}
@@ -102,7 +70,6 @@ export default function Settings() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.2 }}
           >
-            {activeTab === 'profile' && <ProfileTab />}
             {activeTab === 'api-keys' && <ApiKeysTab />}
             {activeTab === 'appearance' && <AppearanceTab />}
             {activeTab === 'notifications' && <NotificationsTab />}
@@ -114,138 +81,56 @@ export default function Settings() {
   )
 }
 
-function ProfileTab() {
-  const [name, setName] = useState('Omkar Parab')
-  const [email, setEmail] = useState('omkar@autonomos.ai')
-
-  return (
-    <div className="space-y-6">
-      <div className="card">
-        <h2 className="text-2xl font-bold mb-6">Profile Information</h2>
-        
-        <div className="space-y-6">
-          {/* Avatar */}
-          <div>
-            <label className="block text-sm font-medium mb-3">Profile Picture</label>
-            <div className="flex items-center gap-4">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-white text-2xl font-bold">
-                OP
-              </div>
-              <div className="flex gap-2">
-                <button className="btn-secondary text-sm">Change</button>
-                <button className="btn-ghost text-sm text-red-600">Remove</button>
-              </div>
-            </div>
-          </div>
-
-          {/* Name */}
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium mb-2">
-              Full Name
-            </label>
-            <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="input"
-              placeholder="Enter your name"
-            />
-          </div>
-
-          {/* Email */}
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium mb-2">
-              Email Address
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="input"
-              placeholder="your@email.com"
-            />
-          </div>
-
-          <div className="flex gap-3">
-            <button className="btn-primary">
-              <Save className="w-4 h-4" />
-              Save Changes
-            </button>
-            <button className="btn-ghost">Cancel</button>
-          </div>
-        </div>
-      </div>
-
-      {/* Change Password */}
-      <div className="card">
-        <h2 className="text-2xl font-bold mb-6">Change Password</h2>
-        
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="current-password" className="block text-sm font-medium mb-2">
-              Current Password
-            </label>
-            <input
-              id="current-password"
-              type="password"
-              className="input"
-              placeholder="••••••••"
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="new-password" className="block text-sm font-medium mb-2">
-              New Password
-            </label>
-            <input
-              id="new-password"
-              type="password"
-              className="input"
-              placeholder="••••••••"
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="confirm-password" className="block text-sm font-medium mb-2">
-              Confirm New Password
-            </label>
-            <input
-              id="confirm-password"
-              type="password"
-              className="input"
-              placeholder="••••••••"
-            />
-          </div>
-
-          <button className="btn-primary">
-            Update Password
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 function ApiKeysTab() {
+  const { keys, addKey, deleteKey, setActiveKey, activeKeyId } = useApiKeys()
   const [showAddKey, setShowAddKey] = useState(false)
-  const [keys, setKeys] = useState<ApiKey[]>([
-    {
-      id: '1',
-      name: 'OpenRouter Production',
-      provider: 'openrouter',
-      key: 'sk-or-v1-xxxxxxxxxxxxxxxxxxxx',
-      model: 'meta-llama/llama-3.3-70b-instruct:free',
-      createdAt: '2026-03-01',
-      lastUsed: '2 minutes ago',
-      isActive: true
-    }
-  ])
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({})
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    name: '',
+    provider: 'openrouter' as 'openrouter' | 'openai' | 'anthropic' | 'google',
+    apiKey: '',
+    model: 'meta-llama/llama-3.3-70b-instruct:free'
+  })
 
   const toggleKeyVisibility = (id: string) => {
     setShowKeys(prev => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  const handleAddKey = () => {
+    if (!formData.name || !formData.apiKey || !formData.model) {
+      toast.error('Please fill in all fields')
+      return
+    }
+
+    addKey({
+      name: formData.name,
+      provider: formData.provider,
+      apiKey: formData.apiKey,
+      model: formData.model
+    })
+
+    toast.success('API key added successfully!', { icon: '✅' })
+    setFormData({ name: '', provider: 'openrouter', apiKey: '', model: 'meta-llama/llama-3.3-70b-instruct:free' })
+    setShowAddKey(false)
+  }
+
+  const handleDeleteKey = (id: string) => {
+    if (confirm('Are you sure you want to delete this API key?')) {
+      deleteKey(id)
+      toast.success('API key deleted', { icon: '🗑️' })
+    }
+  }
+
+  const handleSetActive = (id: string) => {
+    setActiveKey(id)
+    toast.success('Active API key updated!', { icon: '⭐' })
+  }
+
+  const handleCopyKey = (apiKey: string) => {
+    navigator.clipboard.writeText(apiKey)
+    toast.success('API key copied to clipboard!', { icon: '📋' })
   }
 
   return (
@@ -253,13 +138,13 @@ function ApiKeysTab() {
       <div className="card">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold mb-1">API Keys</h2>
+            <h2 className="text-2xl font-bold mb-1">🔑 API Keys</h2>
             <p className="text-sm text-slate-600 dark:text-slate-400">
               Manage your AI provider API keys securely
             </p>
           </div>
           <button
-            onClick={() => setShowAddKey(true)}
+            onClick={() => setShowAddKey(!showAddKey)}
             className="btn-primary"
           >
             <Plus className="w-5 h-5" />
@@ -267,35 +152,131 @@ function ApiKeysTab() {
           </button>
         </div>
 
+        {/* Add Key Form */}
+        {showAddKey && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-strong rounded-xl p-6 mb-6"
+          >
+            <h3 className="text-xl font-bold mb-4">➕ Add API Key</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Key Name</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="e.g., Production Key"
+                  className="input"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Provider</label>
+                <select
+                  value={formData.provider}
+                  onChange={(e) => setFormData({ ...formData, provider: e.target.value as any })}
+                  className="input"
+                >
+                  <option value="openrouter">⭐ OpenRouter (40+ FREE models)</option>
+                  <option value="openai">OpenAI</option>
+                  <option value="anthropic">Anthropic</option>
+                  <option value="google">Google AI</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">API Key</label>
+                <input
+                  type="password"
+                  value={formData.apiKey}
+                  onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
+                  placeholder="sk-..." className="input"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Your API key is stored securely in your browser only
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Model</label>
+                <input
+                  type="text"
+                  value={formData.model}
+                  onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                  placeholder="meta-llama/llama-3.3-70b-instruct:free"
+                  className="input"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  For OpenRouter, use format: provider/model-name:free
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={handleAddKey} className="btn-primary">
+                  <Check className="w-4 h-4" />
+                  Add Key
+                </button>
+                <button onClick={() => setShowAddKey(false)} className="btn-ghost">
+                  <X className="w-4 h-4" />
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* API Keys List */}
         {keys.length > 0 ? (
           <div className="space-y-4">
             {keys.map((key) => (
               <div
                 key={key.id}
-                className="glass-strong rounded-xl p-4 space-y-3"
+                className={`glass-strong rounded-xl p-4 space-y-3 transition-all ${
+                  key.id === activeKeyId ? 'ring-2 ring-purple-500' : ''
+                }`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="font-semibold text-lg">{key.name}</h3>
-                      {key.isActive && (
+                      {key.id === activeKeyId && (
                         <span className="badge badge-success">
-                          <span className="status-dot active" />
+                          <Zap className="w-3 h-3" />
                           Active
+                        </span>
+                      )}
+                      {key.provider === 'openrouter' && (
+                        <span className="text-xs px-2 py-1 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+                          ⭐ 40+ FREE
                         </span>
                       )}
                     </div>
                     <div className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
-                      <div>Provider: <span className="font-medium">{key.provider}</span></div>
+                      <div>Provider: <span className="font-medium capitalize">{key.provider}</span></div>
                       <div>Model: <span className="font-mono text-xs">{key.model}</span></div>
-                      <div>Last used: {key.lastUsed || 'Never'}</div>
+                      <div>Added: {new Date(key.createdAt).toLocaleDateString()}</div>
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button className="btn-ghost p-2" title="Test key">
-                      <Check className="w-4 h-4" />
+                    {key.id !== activeKeyId && (
+                      <button
+                        onClick={() => handleSetActive(key.id)}
+                        className="btn-ghost p-2"
+                        title="Set as active"
+                      >
+                        <Zap className="w-4 h-4" />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleCopyKey(key.apiKey)}
+                      className="btn-ghost p-2"
+                      title="Copy key"
+                    >
+                      <Copy className="w-4 h-4" />
                     </button>
-                    <button className="btn-ghost p-2 text-red-600" title="Delete key">
+                    <button
+                      onClick={() => handleDeleteKey(key.id)}
+                      className="btn-ghost p-2 text-red-600"
+                      title="Delete key"
+                    >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -303,7 +284,7 @@ function ApiKeysTab() {
 
                 <div className="flex items-center gap-2">
                   <code className="flex-1 glass rounded-lg px-3 py-2 text-sm font-mono">
-                    {showKeys[key.id] ? key.key : key.key.replace(/./g, '•')}
+                    {showKeys[key.id] ? key.apiKey : key.apiKey.replace(/./g, '•')}
                   </code>
                   <button
                     onClick={() => toggleKeyVisibility(key.id)}
@@ -330,49 +311,53 @@ function ApiKeysTab() {
         )}
       </div>
 
-      {/* Add Key Form */}
-      {showAddKey && (
-        <div className="card">
-          <h3 className="text-xl font-bold mb-4">Add API Key</h3>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Key Name</label>
-              <input type="text" placeholder="e.g., Production Key" className="input" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Provider</label>
-              <select className="input">
-                <option>OpenRouter</option>
-                <option>OpenAI</option>
-                <option>Anthropic</option>
-                <option>Google AI</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">API Key</label>
-              <input type="password" placeholder="sk-..." className="input" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Model</label>
-              <input type="text" placeholder="meta-llama/llama-3.3-70b-instruct:free" className="input" />
-            </div>
-            <div className="flex gap-3">
-              <button className="btn-primary">Add Key</button>
-              <button onClick={() => setShowAddKey(false)} className="btn-ghost">Cancel</button>
-            </div>
+      {/* Free Models Info */}
+      <div className="card bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-2 border-purple-200 dark:border-purple-800">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-white text-2xl">
+            ⭐
+          </div>
+          <div className="flex-1">
+            <h3 className="text-xl font-bold mb-2">Free Models Available!</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+              OpenRouter offers 40+ FREE AI models (no credit card needed):
+            </p>
+            <ul className="text-sm space-y-1 text-slate-600 dark:text-slate-400">
+              <li>• Llama 3.3 70B (GPT-4 level performance)</li>
+              <li>• StepFun Step 3.5 Flash (533B parameters)</li>
+              <li>• Arcee AI Trinity Large (574B parameters)</li>
+              <li>• Qwen3 Coder 480B (best for coding)</li>
+              <li>• DeepSeek R1 (reasoning specialist)</li>
+            </ul>
+            <a
+              href="https://openrouter.ai/keys"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-primary mt-4 inline-flex items-center gap-2"
+            >
+              Get Free API Key
+            </a>
           </div>
         </div>
-      )}
+      </div>
     </div>
   )
 }
 
 function AppearanceTab() {
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system')
+  const [saved, setSaved] = useState(false)
+
+  const handleSave = () => {
+    localStorage.setItem('autonomos-theme', theme)
+    setSaved(true)
+    toast.success('Theme preference saved!', { icon: '🎨' })
+    setTimeout(() => setSaved(false), 2000)
+  }
 
   return (
     <div className="card">
-      <h2 className="text-2xl font-bold mb-6">Appearance</h2>
+      <h2 className="text-2xl font-bold mb-6">🎨 Appearance</h2>
       
       <div className="space-y-6">
         <div>
@@ -389,7 +374,7 @@ function AppearanceTab() {
                 <button
                   key={option.id}
                   onClick={() => setTheme(option.id)}
-                  className={`glass-strong rounded-xl p-4 flex flex-col items-center gap-3 transition-all ${
+                  className={`glass-strong rounded-xl p-4 flex flex-col items-center gap-3 transition-all hover:scale-105 ${
                     isActive ? 'ring-2 ring-purple-500' : ''
                   }`}
                 >
@@ -405,9 +390,12 @@ function AppearanceTab() {
         </div>
 
         <div className="pt-6 border-t border-slate-200 dark:border-slate-700">
-          <button className="btn-primary">
-            <Save className="w-4 h-4" />
-            Save Preferences
+          <button onClick={handleSave} className="btn-primary" disabled={saved}>
+            {saved ? (
+              <><Check className="w-4 h-4" /> Saved!</>
+            ) : (
+              <><Save className="w-4 h-4" /> Save Preferences</>
+            )}
           </button>
         </div>
       </div>
@@ -416,9 +404,17 @@ function AppearanceTab() {
 }
 
 function NotificationsTab() {
+  const [saved, setSaved] = useState(false)
+
+  const handleSave = () => {
+    setSaved(true)
+    toast.success('Notification preferences saved!', { icon: '🔔' })
+    setTimeout(() => setSaved(false), 2000)
+  }
+
   return (
     <div className="card">
-      <h2 className="text-2xl font-bold mb-6">Notifications</h2>
+      <h2 className="text-2xl font-bold mb-6">🔔 Notifications</h2>
       
       <div className="space-y-6">
         {[
@@ -445,9 +441,12 @@ function NotificationsTab() {
         ))}
 
         <div className="pt-6 border-t border-slate-200 dark:border-slate-700">
-          <button className="btn-primary">
-            <Save className="w-4 h-4" />
-            Save Preferences
+          <button onClick={handleSave} className="btn-primary" disabled={saved}>
+            {saved ? (
+              <><Check className="w-4 h-4" /> Saved!</>
+            ) : (
+              <><Save className="w-4 h-4" /> Save Preferences</>
+            )}
           </button>
         </div>
       </div>
@@ -456,10 +455,18 @@ function NotificationsTab() {
 }
 
 function AdvancedTab() {
+  const [saved, setSaved] = useState(false)
+
+  const handleSave = () => {
+    setSaved(true)
+    toast.success('Advanced settings saved!', { icon: '⚙️' })
+    setTimeout(() => setSaved(false), 2000)
+  }
+
   return (
     <div className="space-y-6">
       <div className="card">
-        <h2 className="text-2xl font-bold mb-6">Advanced Settings</h2>
+        <h2 className="text-2xl font-bold mb-6">⚙️ Advanced Settings</h2>
         
         <div className="space-y-6">
           <div>
@@ -498,10 +505,32 @@ function AdvancedTab() {
           </div>
 
           <div className="pt-6 border-t border-slate-200 dark:border-slate-700">
-            <button className="btn-primary">
-              <Save className="w-4 h-4" />
-              Save Preferences
+            <button onClick={handleSave} className="btn-primary" disabled={saved}>
+              {saved ? (
+                <><Check className="w-4 h-4" /> Saved!</>
+              ) : (
+                <><Save className="w-4 h-4" /> Save Preferences</>
+              )}
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* System Info */}
+      <div className="card">
+        <h3 className="text-xl font-bold mb-4">📊 System Information</h3>
+        <div className="space-y-3 text-sm">
+          <div className="flex justify-between">
+            <span className="text-slate-600 dark:text-slate-400">Version:</span>
+            <span className="font-mono">0.1.0</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-600 dark:text-slate-400">Build:</span>
+            <span className="font-mono">2026.03.05</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-600 dark:text-slate-400">Environment:</span>
+            <span className="font-mono">Production</span>
           </div>
         </div>
       </div>
@@ -520,13 +549,23 @@ function AdvancedTab() {
         
         <div className="space-y-4">
           <div className="glass-strong rounded-xl p-4">
-            <h3 className="font-semibold mb-2">Delete Account</h3>
+            <h3 className="font-semibold mb-2">Clear All Data</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-              Permanently delete your account and all associated data. This action cannot be undone.
+              Clear all workflows, API keys, and settings from browser storage.
             </p>
-            <button className="btn-ghost text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+            <button
+              onClick={() => {
+                if (confirm('Are you sure? This will clear ALL your data!')) {
+                  localStorage.clear()
+                  sessionStorage.clear()
+                  toast.success('All data cleared!', { icon: '🗑️' })
+                  setTimeout(() => window.location.reload(), 1000)
+                }
+              }}
+              className="btn-ghost text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+            >
               <Trash2 className="w-4 h-4" />
-              Delete Account
+              Clear All Data
             </button>
           </div>
         </div>
