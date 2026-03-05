@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, validator
 from typing import Optional, List, Dict, Any
 import httpx
@@ -46,7 +47,7 @@ async def rate_limit_handler(request, exc):
     )
 
 # CORS middleware with strict validation
-allowed_origins = [origin.strip() for origin in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")]
+allowed_origins = [origin.strip() for origin in os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:5173").split(",")]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
@@ -168,16 +169,20 @@ async def call_ai_api(
                 
         except httpx.HTTPStatusError as e:
             logger.error(f"API error for provider {provider}: {e.response.status_code}")
-            raise HTTPException(
-                status_code=500,
-                detail=f"AI provider returned error: {e.response.status_code}"
-            )
+            error_detail = f"AI provider returned error: {e.response.status_code}"
+            try:
+                error_data = e.response.json()
+                if 'error' in error_data:
+                    error_detail = f"{error_detail} - {error_data['error'].get('message', '')}"
+            except:
+                pass
+            raise HTTPException(status_code=500, detail=error_detail)
         except httpx.TimeoutException:
             logger.error(f"Timeout calling {provider} API")
             raise HTTPException(status_code=504, detail="AI provider request timed out")
         except Exception as e:
             logger.error(f"Unexpected error calling {provider}: {str(e)}")
-            raise HTTPException(status_code=500, detail="Failed to communicate with AI provider")
+            raise HTTPException(status_code=500, detail=f"Failed to communicate with AI provider: {str(e)}")
 
 async def execute_workflow(
     nodes: List[WorkflowNode],
@@ -247,7 +252,7 @@ async def execute_workflow(
             results[node_id] = {
                 "status": "error",
                 "type": node_type,
-                "error": "Execution failed"
+                "error": str(e)
             }
     
     return {
@@ -288,7 +293,7 @@ async def execute_workflow_endpoint(
     if not x_api_provider or not x_api_key or not x_model:
         raise HTTPException(
             status_code=400,
-            detail="Missing required headers: X-API-Provider, X-API-Key, X-Model"
+            detail="Missing required headers: X-API-Provider, X-API-Key, X-Model. Please configure your API credentials in Settings."
         )
     
     try:
@@ -305,7 +310,7 @@ async def execute_workflow_endpoint(
         raise
     except Exception as e:
         logger.error(f"Workflow execution error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Workflow execution failed")
+        raise HTTPException(status_code=500, detail=f"Workflow execution failed: {str(e)}")
 
 @app.post("/api/test-key")
 @limiter.limit("3/minute")
@@ -324,16 +329,16 @@ async def test_api_key(request: TestKeyRequest):
             "message": "API key is valid",
             "response": response[:100]
         }
-    except HTTPException:
+    except HTTPException as e:
         return {
             "success": False,
-            "message": "API key validation failed"
+            "message": f"API key validation failed: {e.detail}"
         }
     except Exception as e:
         logger.error(f"Key test error: {str(e)}")
         return {
             "success": False,
-            "message": "Validation error occurred"
+            "message": f"Validation error: {str(e)}"
         }
 
 @app.get("/api/models/{provider}")
@@ -341,9 +346,11 @@ async def get_available_models(provider: str):
     """Get available models for a provider."""
     models = {
         "openrouter": [
+            "google/gemini-2.0-flash-exp:free",
+            "meta-llama/llama-3.3-70b-instruct:free",
+            "microsoft/phi-3-medium-128k-instruct:free",
             "openai/gpt-4-turbo",
-            "anthropic/claude-3-opus",
-            "meta-llama/llama-3-70b"
+            "anthropic/claude-3-opus"
         ],
         "openai": [
             "gpt-4-turbo",
