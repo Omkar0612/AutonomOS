@@ -136,10 +136,10 @@ export default function WorkflowBuilder() {
       }
 
       try {
-        // Pass API key config to backend
+        // Pass API key config to backend - FIX: use activeKey.apiKey not activeKey.key
         const result = await apiService.executeWorkflow(workflow, {
           provider: activeKey.provider,
-          apiKey: activeKey.key,
+          apiKey: activeKey.apiKey,  // ← FIXED: was activeKey.key
           model: activeKey.model,
         })
         
