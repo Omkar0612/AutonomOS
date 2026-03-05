@@ -12,16 +12,15 @@ import ReactFlow, {
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Play, Save, Trash2, Sparkles, Settings as SettingsIcon, FileJson } from 'lucide-react'
+import { Play, Save, Trash2, Sparkles, Settings as SettingsIcon, FileJson, ExternalLink } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
 import Sidebar from './Sidebar'
 import NodePanel from './NodePanel'
 import TemplatesPanel from './TemplatesPanel'
-import ExecutionResultsPanel from './ExecutionResultsPanel'
 import { TriggerNode, AgentNode, ActionNode, LogicNode } from './nodes'
-import { apiService, WorkflowExecutionResult } from '../services/api'
+import { apiService } from '../services/api'
 import { useApiKeys } from '../contexts/ApiKeyContext'
 import { exportWorkflowJSON } from '../utils/export'
 
@@ -34,8 +33,7 @@ export default function WorkflowBuilder() {
   const [selectedNode, setSelectedNode] = useState<Node | null>(null)
   const [showTemplates, setShowTemplates] = useState(false)
   const [isExecuting, setIsExecuting] = useState(false)
-  const [executionResult, setExecutionResult] = useState<WorkflowExecutionResult | null>(null)
-  const [showResults, setShowResults] = useState(false)
+  const [lastResultsId, setLastResultsId] = useState<string | null>(null)
   const { getActiveKey } = useApiKeys()
 
   // Define custom node types
@@ -143,16 +141,25 @@ export default function WorkflowBuilder() {
           model: activeKey.model,
         })
         
-        setExecutionResult(result)
-        setShowResults(true)
+        // Store results in sessionStorage with unique ID
+        const resultsId = `${Date.now()}`
+        sessionStorage.setItem(`autonomos-results-${resultsId}`, JSON.stringify(result))
+        sessionStorage.setItem(`autonomos-workflow-name-${resultsId}`, 'workflow')
+        setLastResultsId(resultsId)
         
         toast.success(
           <div>
             <div className="font-semibold">Workflow executed successfully!</div>
             <div className="text-xs mt-1">Processed {result.nodes_executed} nodes</div>
+            <div className="text-xs mt-1 opacity-75">Opening results page...</div>
           </div>,
           { id: toastId, icon: '✅', duration: 4000 }
         )
+        
+        // Auto-open results in new tab
+        setTimeout(() => {
+          window.open(`/results?id=${resultsId}`, '_blank')
+        }, 500)
         
         console.log('Workflow result:', result)
       } catch (apiError: any) {
@@ -185,6 +192,12 @@ export default function WorkflowBuilder() {
     }
   }
 
+  const handleViewResults = () => {
+    if (lastResultsId) {
+      window.open(`/results?id=${lastResultsId}`, '_blank')
+    }
+  }
+
   const handleClear = () => {
     if (nodes.length === 0) {
       toast('Workflow is already empty', { icon: '📝' })
@@ -194,8 +207,7 @@ export default function WorkflowBuilder() {
       setNodes([])
       setEdges([])
       setSelectedNode(null)
-      setExecutionResult(null)
-      setShowResults(false)
+      setLastResultsId(null)
       toast.success('Workflow cleared', { icon: '🗑️' })
     }
   }
@@ -263,6 +275,21 @@ export default function WorkflowBuilder() {
               <SettingsIcon className="w-4 h-4" />
               Setup API Key
             </Link>
+          )}
+
+          {/* View Results Button - Shows after execution */}
+          {lastResultsId && (
+            <motion.button
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              onClick={handleViewResults}
+              className="btn-secondary flex items-center gap-2 shadow-lg"
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <ExternalLink className="w-5 h-5" />
+              <span className="hidden sm:inline">Results</span>
+            </motion.button>
           )}
 
           <motion.button
@@ -360,17 +387,6 @@ export default function WorkflowBuilder() {
             />
           </ReactFlow>
         </motion.div>
-
-        {/* Execution Results Panel - NEW */}
-        <AnimatePresence>
-          {showResults && executionResult && (
-            <ExecutionResultsPanel
-              result={executionResult}
-              workflowName="workflow"
-              onClose={() => setShowResults(false)}
-            />
-          )}
-        </AnimatePresence>
 
         {/* Empty State */}
         <AnimatePresence>
