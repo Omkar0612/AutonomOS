@@ -1,15 +1,16 @@
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 from typing import Optional, List, Dict, Any
 import httpx
 import os
 from dotenv import load_dotenv
 import logging
 from slowapi.errors import RateLimitExceeded
-from slowapi import Limiter
+from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
+import time
 
 from validators import (
     sanitize_html,
@@ -24,6 +25,9 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address)
+
 # Create FastAPI app
 app = FastAPI(
     title="AutonomOS API",
@@ -31,20 +35,8 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# Initialize rate limiter
-limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
-
-# Rate limit handler
-@app.exception_handler(RateLimitExceeded)
-async def rate_limit_handler(request, exc):
-    return JSONResponse(
-        status_code=429,
-        content={
-            "error": "Rate limit exceeded",
-            "detail": "Too many requests. Please try again later."
-        }
-    )
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS middleware with strict validation
 allowed_origins = [origin.strip() for origin in os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:5173").split(",")]
@@ -56,15 +48,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Models with validation
+# Models with Pydantic v2 validation
 class WorkflowNode(BaseModel):
     id: str
     type: str
     data: Dict[str, Any]
     position: Dict[str, float]
     
-    @validator('data')
-    def validate_node_data(cls, v, values):
+    @field_validator('data')
+    @classmethod
+    def validate_node_data(cls, v: Dict[str, Any]) -> Dict[str, Any]:
         """Validate and sanitize node data."""
         if 'task' in v:
             v['task'] = sanitize_html(v['task'])
@@ -81,8 +74,9 @@ class WorkflowExecutionRequest(BaseModel):
     nodes: List[WorkflowNode]
     edges: List[WorkflowEdge]
     
-    @validator('nodes')
-    def validate_nodes(cls, v, values):
+    @field_validator('nodes')
+    @classmethod
+    def validate_nodes(cls, v: List[WorkflowNode]) -> List[WorkflowNode]:
         if not v:
             raise ValueError("Workflow must contain at least one node")
         return v
@@ -193,13 +187,15 @@ async def execute_workflow(
 ) -> Dict[str, Any]:
     """Execute workflow nodes with cycle detection and validation."""
     
+    start_time = time.time()
+    
     # Validate workflow structure (includes cycle detection)
     validate_workflow_structure(
-        [node.dict() for node in nodes],
-        [edge.dict() for edge in edges]
+        [node.model_dump() for node in nodes],
+        [edge.model_dump() for edge in edges]
     )
     
-    results = {}
+    results = []
     
     for node in nodes:
         node_id = node.id
@@ -210,57 +206,85 @@ async def execute_workflow(
         
         try:
             if node_type == "trigger":
-                results[node_id] = {
+                result = {
+                    "node_id": node_id,
                     "status": "success",
                     "type": "trigger",
-                    "output": f"Triggered: {node_data.get('label', 'Unknown')}"
+                    "label": node_data.get('label', 'Unknown Trigger'),
+                    "output": f"Triggered: {node_data.get('label', 'Unknown')}",
+                    "trigger_type": node_data.get('triggerType', 'manual')
                 }
                 
             elif node_type == "agent":
                 task = node_data.get("task", "Process input")
                 agent_type = node_data.get("agentType", "single")
                 
-                context = "\n".join([r["output"] for r in results.values() if "output" in r])
+                # Build context from previous results
+                context = "\n".join([r.get("output", "") for r in results if "output" in r])
                 prompt = f"Task: {task}\n\nContext: {context}" if context else task
                 system_prompt = f"You are an AI agent in a workflow. Agent type: {agent_type}"
                 
                 response = await call_ai_api(provider, api_key, model, prompt, system_prompt)
                 
-                results[node_id] = {
+                result = {
+                    "node_id": node_id,
                     "status": "success",
                     "type": "agent",
+                    "label": node_data.get('label', 'Unknown Agent'),
                     "task": task,
-                    "output": response
+                    "output": response,
+                    "agent_type": agent_type
                 }
                 
             elif node_type == "action":
-                results[node_id] = {
+                result = {
+                    "node_id": node_id,
                     "status": "success",
                     "type": "action",
-                    "output": f"Action executed: {node_data.get('label', 'Unknown')}"
+                    "label": node_data.get('label', 'Unknown Action'),
+                    "output": f"Action executed: {node_data.get('label', 'Unknown')}",
+                    "action_type": node_data.get('actionType', 'custom')
                 }
                 
             elif node_type == "logic":
-                results[node_id] = {
+                result = {
+                    "node_id": node_id,
                     "status": "success",
                     "type": "logic",
-                    "output": f"Logic evaluated: {node_data.get('label', 'Unknown')}"
+                    "label": node_data.get('label', 'Unknown Logic'),
+                    "output": f"Logic evaluated: {node_data.get('label', 'Unknown')}",
+                    "logic_type": node_data.get('logicType', 'if_else')
                 }
+            else:
+                result = {
+                    "node_id": node_id,
+                    "status": "success",
+                    "type": node_type,
+                    "label": node_data.get('label', 'Unknown'),
+                    "output": f"Node executed: {node_data.get('label', 'Unknown')}"
+                }
+            
+            results.append(result)
             
         except Exception as e:
             logger.error(f"Error executing node {node_id}: {str(e)}")
-            results[node_id] = {
+            results.append({
+                "node_id": node_id,
                 "status": "error",
                 "type": node_type,
+                "label": node_data.get('label', 'Unknown'),
                 "error": str(e)
-            }
+            })
+    
+    execution_time = round(time.time() - start_time, 2)
     
     return {
         "status": "completed",
         "nodes_executed": len(nodes),
         "results": results,
         "provider": provider,
-        "model": model
+        "model": model,
+        "execution_time": f"{execution_time}s"
     }
 
 # API Routes
@@ -283,7 +307,8 @@ async def health_check():
 @app.post("/api/workflows/execute")
 @limiter.limit("10/minute")
 async def execute_workflow_endpoint(
-    request: WorkflowExecutionRequest,
+    request_data: WorkflowExecutionRequest,
+    http_request: Request,
     x_api_provider: Optional[str] = Header(None),
     x_api_key: Optional[str] = Header(None),
     x_model: Optional[str] = Header(None)
@@ -298,8 +323,8 @@ async def execute_workflow_endpoint(
     
     try:
         result = await execute_workflow(
-            request.nodes,
-            request.edges,
+            request_data.nodes,
+            request_data.edges,
             x_api_provider,
             x_api_key,
             x_model
@@ -314,13 +339,16 @@ async def execute_workflow_endpoint(
 
 @app.post("/api/test-key")
 @limiter.limit("3/minute")
-async def test_api_key(request: TestKeyRequest):
+async def test_api_key(
+    request_data: TestKeyRequest,
+    http_request: Request
+):
     """Test if an API key is valid (rate limited)."""
     try:
         response = await call_ai_api(
-            request.provider,
-            request.apiKey,
-            request.model,
+            request_data.provider,
+            request_data.apiKey,
+            request_data.model,
             "Say 'Hello' if you can hear me.",
             "You are a test assistant."
         )
