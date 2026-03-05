@@ -1,10 +1,12 @@
 import { motion } from 'framer-motion'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { 
   Plus, TrendingUp, TrendingDown, Activity, Clock, 
-  Zap, CheckCircle2, AlertCircle, Workflow, BarChart3 
+  Zap, CheckCircle2, AlertCircle, Workflow, BarChart3,
+  Settings, Play
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 
 interface Metric {
   id: string
@@ -34,6 +36,8 @@ interface ActivityItem {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate()
+  
   const [metrics, setMetrics] = useState<Metric[]>([
     {
       id: '1',
@@ -145,6 +149,11 @@ export default function Dashboard() {
     show: { opacity: 1, y: 0 }
   }
 
+  const handleCreateWorkflow = () => {
+    navigate('/workflow')
+    toast.success('Opening workflow builder...', { icon: '✨' })
+  }
+
   return (
     <div className="flex-1 overflow-auto">
       <div className="max-w-7xl mx-auto p-6 space-y-8">
@@ -162,10 +171,10 @@ export default function Dashboard() {
               Here's what's happening with your workflows today.
             </p>
           </div>
-          <Link to="/workflows/new" className="btn-primary glow">
+          <button onClick={handleCreateWorkflow} className="btn-primary glow">
             <Plus className="w-5 h-5" />
             New Workflow
-          </Link>
+          </button>
         </motion.div>
 
         {/* Metrics Grid */}
@@ -216,10 +225,13 @@ export default function Dashboard() {
             className="lg:col-span-2 card"
           >
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">Recent Workflows</h2>
-              <Link to="/workflows" className="btn-ghost text-sm">
+              <h2 className="text-2xl font-bold">📊 Recent Workflows</h2>
+              <button
+                onClick={() => navigate('/workflow')}
+                className="btn-ghost text-sm"
+              >
                 View all
-              </Link>
+              </button>
             </div>
             
             <div className="space-y-3">
@@ -227,6 +239,7 @@ export default function Dashboard() {
                 <motion.div
                   key={workflow.id}
                   whileHover={{ scale: 1.01, x: 4 }}
+                  onClick={() => navigate('/workflow')}
                   className="glass-strong rounded-xl p-4 cursor-pointer group"
                 >
                   <div className="flex items-start justify-between mb-3">
@@ -259,13 +272,23 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Link
-                      to={`/workflows/${workflow.id}`}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        navigate('/workflow')
+                      }}
                       className="btn-ghost text-xs py-1.5 px-3"
                     >
+                      <Play className="w-3 h-3 mr-1" />
                       Edit
-                    </Link>
-                    <button className="btn-ghost text-xs py-1.5 px-3">
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toast.success('Analytics coming soon!', { icon: '📊' })
+                      }}
+                      className="btn-ghost text-xs py-1.5 px-3"
+                    >
                       <BarChart3 className="w-3 h-3 mr-1" />
                       Analytics
                     </button>
@@ -283,10 +306,10 @@ export default function Dashboard() {
                 <p className="text-slate-500 dark:text-slate-500 mb-4">
                   Create your first workflow to get started
                 </p>
-                <Link to="/workflows/new" className="btn-primary">
+                <button onClick={handleCreateWorkflow} className="btn-primary">
                   <Plus className="w-4 h-4" />
                   Create Workflow
-                </Link>
+                </button>
               </div>
             )}
           </motion.div>
@@ -298,7 +321,7 @@ export default function Dashboard() {
             transition={{ delay: 0.3 }}
             className="card"
           >
-            <h2 className="text-2xl font-bold mb-6">Activity Feed</h2>
+            <h2 className="text-2xl font-bold mb-6">⚡ Activity Feed</h2>
             
             <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
               {activities.map((activity, index) => (
@@ -351,27 +374,58 @@ export default function Dashboard() {
           transition={{ delay: 0.4 }}
           className="card"
         >
-          <h2 className="text-2xl font-bold mb-6">Quick Actions</h2>
+          <h2 className="text-2xl font-bold mb-6">🚀 Quick Actions</h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { label: 'Create Workflow', icon: Plus, to: '/workflows/new', color: 'purple' },
-              { label: 'Browse Templates', icon: BarChart3, to: '/templates', color: 'blue' },
-              { label: 'View Analytics', icon: Activity, to: '/analytics', color: 'emerald' },
-              { label: 'API Settings', icon: Zap, to: '/settings', color: 'amber' },
-            ].map((action) => (
-              <Link
-                key={action.label}
-                to={action.to}
-                className="glass-strong rounded-xl p-4 hover:scale-105 transition-all duration-300 group"
-              >
-                <div className={`bg-gradient-to-br from-${action.color}-500 to-${action.color}-600 p-3 rounded-xl inline-block mb-3 glow`}>
-                  <action.icon className="w-5 h-5 text-white" />
-                </div>
-                <div className="font-semibold group-hover:gradient-text transition-all">
-                  {action.label}
-                </div>
-              </Link>
-            ))}
+            <button
+              onClick={handleCreateWorkflow}
+              className="glass-strong rounded-xl p-4 hover:scale-105 transition-all duration-300 group text-left"
+            >
+              <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-3 rounded-xl inline-block mb-3 glow">
+                <Plus className="w-5 h-5 text-white" />
+              </div>
+              <div className="font-semibold group-hover:gradient-text transition-all">
+                Create Workflow
+              </div>
+            </button>
+
+            <button
+              onClick={() => {
+                navigate('/workflow')
+                toast.success('Loading templates...', { icon: '📋' })
+              }}
+              className="glass-strong rounded-xl p-4 hover:scale-105 transition-all duration-300 group text-left"
+            >
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-3 rounded-xl inline-block mb-3 glow">
+                <BarChart3 className="w-5 h-5 text-white" />
+              </div>
+              <div className="font-semibold group-hover:gradient-text transition-all">
+                Browse Templates
+              </div>
+            </button>
+
+            <button
+              onClick={() => toast.success('Analytics dashboard coming soon!', { icon: '📊' })}
+              className="glass-strong rounded-xl p-4 hover:scale-105 transition-all duration-300 group text-left"
+            >
+              <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-3 rounded-xl inline-block mb-3 glow">
+                <Activity className="w-5 h-5 text-white" />
+              </div>
+              <div className="font-semibold group-hover:gradient-text transition-all">
+                View Analytics
+              </div>
+            </button>
+
+            <Link
+              to="/settings"
+              className="glass-strong rounded-xl p-4 hover:scale-105 transition-all duration-300 group"
+            >
+              <div className="bg-gradient-to-br from-amber-500 to-amber-600 p-3 rounded-xl inline-block mb-3 glow">
+                <Settings className="w-5 h-5 text-white" />
+              </div>
+              <div className="font-semibold group-hover:gradient-text transition-all">
+                API Settings
+              </div>
+            </Link>
           </div>
         </motion.div>
       </div>
