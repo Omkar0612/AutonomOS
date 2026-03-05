@@ -212,7 +212,10 @@ export default function WorkflowBuilder() {
           { id: toastId, icon: '✅', duration: 4000 }
         )
         
-        console.log('Workflow result:', result)
+        // Development-only logging
+        if (import.meta.env.DEV) {
+          console.log('Workflow execution result:', result)
+        }
       } catch (apiError: any) {
         if (apiError.code === 'ERR_NETWORK' || apiError.message?.includes('Network Error')) {
           // Generate demo results instead
@@ -250,7 +253,10 @@ export default function WorkflowBuilder() {
         { id: toastId, icon: '❌', duration: 5000 }
       )
       
-      console.error('Workflow execution error:', error)
+      // Development-only error logging
+      if (import.meta.env.DEV) {
+        console.error('Workflow execution error:', error)
+      }
     } finally {
       setIsExecuting(false)
     }
