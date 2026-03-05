@@ -1,81 +1,41 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
-import { AnimatePresence } from 'framer-motion'
-
-// Pages
-import LandingPage from './pages/LandingPage'
-import LoginPage from './pages/LoginPage'
-import SignupPage from './pages/SignupPage'
-import DashboardPage from './pages/DashboardPage'
-import WorkflowBuilderPage from './pages/WorkflowBuilderPage'
-import WorkflowsPage from './pages/WorkflowsPage'
-import TemplatesPage from './pages/TemplatesPage'
-import SettingsPage from './pages/SettingsPage'
-import AnalyticsPage from './pages/AnalyticsPage'
-
-// Components
-import ProtectedRoute from './components/ProtectedRoute'
-import ErrorBoundary from './components/ErrorBoundary'
-import { useAuth } from './contexts/AuthContext'
-import AnimatedBackground from './components/AnimatedBackground'
+import { ApiKeyProvider } from './contexts/ApiKeyContext'
+import Layout from './components/Layout'
+import Dashboard from './pages/Dashboard'
+import WorkflowBuilder from './components/WorkflowBuilder'
+import Settings from './pages/Settings'
+import ResultsPage from './pages/ResultsPage'
 
 function App() {
-  const { isAuthenticated } = useAuth()
-
   return (
-    <ErrorBoundary>
-      <div className="min-h-screen relative">
-        <AnimatedBackground />
-        
-        <AnimatePresence mode="wait">
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={!isAuthenticated ? <LandingPage /> : <Navigate to="/dashboard" replace />} />
-            <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to="/dashboard" replace />} />
-            <Route path="/signup" element={!isAuthenticated ? <SignupPage /> : <Navigate to="/dashboard" replace />} />
-            
-            {/* Protected Routes */}
-            <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-            <Route path="/workflows" element={<ProtectedRoute><WorkflowsPage /></ProtectedRoute>} />
-            <Route path="/workflows/new" element={<ProtectedRoute><WorkflowBuilderPage /></ProtectedRoute>} />
-            <Route path="/workflows/:id" element={<ProtectedRoute><WorkflowBuilderPage /></ProtectedRoute>} />
-            <Route path="/templates" element={<ProtectedRoute><TemplatesPage /></ProtectedRoute>} />
-            <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-            
-            {/* 404 */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </AnimatePresence>
-        
-        <Toaster 
+    <ApiKeyProvider>
+      <Router>
+        <Toaster
           position="top-right"
           toastOptions={{
-            duration: 3000,
+            duration: 4000,
             style: {
-              background: 'rgba(255, 255, 255, 0.95)',
-              backdropFilter: 'blur(12px)',
-              color: '#334155',
-              padding: '16px',
+              background: 'rgba(255, 255, 255, 0.9)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
               borderRadius: '12px',
-              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
-            },
-            success: {
-              iconTheme: {
-                primary: '#10b981',
-                secondary: '#fff',
-              },
-            },
-            error: {
-              iconTheme: {
-                primary: '#ef4444',
-                secondary: '#fff',
-              },
             },
           }}
         />
-      </div>
-    </ErrorBoundary>
+        <Routes>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="workflow" element={<WorkflowBuilder />} />
+            <Route path="settings" element={<Settings />} />
+          </Route>
+          <Route path="/results" element={<ResultsPage />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </Router>
+    </ApiKeyProvider>
   )
 }
 
