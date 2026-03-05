@@ -5,7 +5,6 @@ import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import WorkflowBuilder from './components/WorkflowBuilder'
 import Settings from './pages/Settings'
-import ResultsPage from './pages/ResultsPage'
 
 function App() {
   return (
@@ -24,16 +23,15 @@ function App() {
             },
           }}
         />
-        <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="workflow" element={<WorkflowBuilder />} />
-            <Route path="settings" element={<Settings />} />
-          </Route>
-          <Route path="/results" element={<ResultsPage />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
+        <Layout>
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/workflow" element={<WorkflowBuilder />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </Layout>
       </Router>
     </ApiKeyProvider>
   )
