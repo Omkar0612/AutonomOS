@@ -1,3 +1,4 @@
+import React from 'react'
 import { motion } from 'framer-motion'
 import { useState } from 'react'
 import {
@@ -190,7 +191,8 @@ function ApiKeysTab() {
                   type="password"
                   value={formData.apiKey}
                   onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-                  placeholder="sk-..." className="input"
+                  placeholder="sk-..."
+                  className="input"
                 />
                 <p className="text-xs text-slate-500 mt-1">
                   Your API key is stored securely in your browser only

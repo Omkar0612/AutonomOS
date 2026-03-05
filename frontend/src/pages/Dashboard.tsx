@@ -1,11 +1,12 @@
+import React from 'react'
 import { motion } from 'framer-motion'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { 
   Plus, TrendingUp, TrendingDown, Activity, Clock, 
   Zap, CheckCircle2, AlertCircle, Workflow, BarChart3,
   Settings, Play
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import toast from 'react-hot-toast'
 
 interface Metric {
@@ -38,7 +39,7 @@ interface ActivityItem {
 export default function Dashboard() {
   const navigate = useNavigate()
   
-  const [metrics, setMetrics] = useState<Metric[]>([
+  const [metrics] = useState<Metric[]>([
     {
       id: '1',
       label: 'Total Workflows',
@@ -77,7 +78,7 @@ export default function Dashboard() {
     },
   ])
 
-  const [recentWorkflows, setRecentWorkflows] = useState<WorkflowItem[]>([
+  const [recentWorkflows] = useState<WorkflowItem[]>([
     {
       id: '1',
       name: 'Lead Generation Pipeline',
@@ -104,7 +105,7 @@ export default function Dashboard() {
     },
   ])
 
-  const [activities, setActivities] = useState<ActivityItem[]>([
+  const [activities] = useState<ActivityItem[]>([
     {
       id: '1',
       type: 'execution',
@@ -184,36 +185,39 @@ export default function Dashboard() {
           animate="show"
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
         >
-          {metrics.map((metric) => (
-            <motion.div
-              key={metric.id}
-              variants={item}
-              whileHover={{ scale: 1.02, y: -5 }}
-              className="card gradient-card group cursor-pointer"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className={`bg-gradient-to-br ${metric.color} p-3 rounded-xl glow`}>
-                  <metric.icon className="w-6 h-6 text-white" />
+          {metrics.map((metric) => {
+            const Icon = metric.icon
+            return (
+              <motion.div
+                key={metric.id}
+                variants={item}
+                whileHover={{ scale: 1.02, y: -5 }}
+                className="card gradient-card group cursor-pointer"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className={`bg-gradient-to-br ${metric.color} p-3 rounded-xl glow`}>
+                    <Icon className="w-6 h-6 text-white" />
+                  </div>
+                  <div className={`flex items-center gap-1 text-sm font-semibold ${
+                    metric.trend === 'up' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+                  }`}>
+                    {metric.trend === 'up' ? (
+                      <TrendingUp className="w-4 h-4" />
+                    ) : (
+                      <TrendingDown className="w-4 h-4" />
+                    )}
+                    {Math.abs(metric.change)}%
+                  </div>
                 </div>
-                <div className={`flex items-center gap-1 text-sm font-semibold ${
-                  metric.trend === 'up' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
-                }`}>
-                  {metric.trend === 'up' ? (
-                    <TrendingUp className="w-4 h-4" />
-                  ) : (
-                    <TrendingDown className="w-4 h-4" />
-                  )}
-                  {Math.abs(metric.change)}%
+                <div className="text-3xl font-black mb-1 group-hover:gradient-text transition-all">
+                  {metric.value}
                 </div>
-              </div>
-              <div className="text-3xl font-black mb-1 group-hover:gradient-text transition-all">
-                {metric.value}
-              </div>
-              <div className="text-sm text-slate-600 dark:text-slate-400">
-                {metric.label}
-              </div>
-            </motion.div>
-          ))}
+                <div className="text-sm text-slate-600 dark:text-slate-400">
+                  {metric.label}
+                </div>
+              </motion.div>
+            )
+          })}
         </motion.div>
 
         <div className="grid lg:grid-cols-3 gap-6">
@@ -415,9 +419,9 @@ export default function Dashboard() {
               </div>
             </button>
 
-            <Link
-              to="/settings"
-              className="glass-strong rounded-xl p-4 hover:scale-105 transition-all duration-300 group"
+            <button
+              onClick={() => navigate('/settings')}
+              className="glass-strong rounded-xl p-4 hover:scale-105 transition-all duration-300 group text-left"
             >
               <div className="bg-gradient-to-br from-amber-500 to-amber-600 p-3 rounded-xl inline-block mb-3 glow">
                 <Settings className="w-5 h-5 text-white" />
@@ -425,7 +429,7 @@ export default function Dashboard() {
               <div className="font-semibold group-hover:gradient-text transition-all">
                 API Settings
               </div>
-            </Link>
+            </button>
           </div>
         </motion.div>
       </div>
