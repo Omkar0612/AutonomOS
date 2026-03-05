@@ -11,12 +11,16 @@ from slowapi.errors import RateLimitExceeded
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 import time
+import uuid
 
 from validators import (
     sanitize_html,
     validate_workflow_node,
     validate_workflow_structure
 )
+
+# Import new execution engine
+from execution import WorkflowExecutor, TriggerManager
 
 # Load environment variables
 load_dotenv()
@@ -28,11 +32,15 @@ logger = logging.getLogger(__name__)
 # Initialize rate limiter
 limiter = Limiter(key_func=get_remote_address)
 
+# Initialize execution components
+workflow_executor = WorkflowExecutor()
+trigger_manager = TriggerManager()
+
 # Create FastAPI app
 app = FastAPI(
     title="AutonomOS API",
-    description="AI Workflow Execution Engine with Security",
-    version="2.0.0"
+    description="AI Workflow Execution Engine with Enhanced Control Flow",
+    version="2.1.0"
 )
 
 app.state.limiter = limiter
@@ -85,6 +93,11 @@ class TestKeyRequest(BaseModel):
     provider: str
     apiKey: str
     model: str
+
+class TriggerRegistrationRequest(BaseModel):
+    workflow_id: str
+    trigger_type: str
+    config: Dict[str, Any]
 
 # AI Provider configurations
 AI_PROVIDERS = {
@@ -178,160 +191,73 @@ async def call_ai_api(
             logger.error(f"Unexpected error calling {provider}: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Failed to communicate with AI provider: {str(e)}")
 
-async def execute_workflow(
-    nodes: List[WorkflowNode],
-    edges: List[WorkflowEdge],
-    provider: str,
-    api_key: str,
-    model: str
-) -> Dict[str, Any]:
-    """Execute workflow nodes with cycle detection and validation."""
-    
-    start_time = time.time()
-    
-    # Validate workflow structure (includes cycle detection)
-    validate_workflow_structure(
-        [node.model_dump() for node in nodes],
-        [edge.model_dump() for edge in edges]
-    )
-    
-    results = []
-    
-    for node in nodes:
-        node_id = node.id
-        node_type = node.type
-        node_data = node.data
-        
-        logger.info(f"Executing node: {node_id} ({node_type})")
-        
-        try:
-            if node_type == "trigger":
-                result = {
-                    "node_id": node_id,
-                    "status": "success",
-                    "type": "trigger",
-                    "label": node_data.get('label', 'Unknown Trigger'),
-                    "output": f"Triggered: {node_data.get('label', 'Unknown')}",
-                    "trigger_type": node_data.get('triggerType', 'manual')
-                }
-                
-            elif node_type == "agent":
-                task = node_data.get("task", "Process input")
-                agent_type = node_data.get("agentType", "single")
-                
-                # Build context from previous results
-                context = "\n".join([r.get("output", "") for r in results if "output" in r])
-                prompt = f"Task: {task}\n\nContext: {context}" if context else task
-                system_prompt = f"You are an AI agent in a workflow. Agent type: {agent_type}"
-                
-                response = await call_ai_api(provider, api_key, model, prompt, system_prompt)
-                
-                result = {
-                    "node_id": node_id,
-                    "status": "success",
-                    "type": "agent",
-                    "label": node_data.get('label', 'Unknown Agent'),
-                    "task": task,
-                    "output": response,
-                    "agent_type": agent_type
-                }
-                
-            elif node_type == "action":
-                result = {
-                    "node_id": node_id,
-                    "status": "success",
-                    "type": "action",
-                    "label": node_data.get('label', 'Unknown Action'),
-                    "output": f"Action executed: {node_data.get('label', 'Unknown')}",
-                    "action_type": node_data.get('actionType', 'custom')
-                }
-                
-            elif node_type == "logic":
-                result = {
-                    "node_id": node_id,
-                    "status": "success",
-                    "type": "logic",
-                    "label": node_data.get('label', 'Unknown Logic'),
-                    "output": f"Logic evaluated: {node_data.get('label', 'Unknown')}",
-                    "logic_type": node_data.get('logicType', 'if_else')
-                }
-            else:
-                result = {
-                    "node_id": node_id,
-                    "status": "success",
-                    "type": node_type,
-                    "label": node_data.get('label', 'Unknown'),
-                    "output": f"Node executed: {node_data.get('label', 'Unknown')}"
-                }
-            
-            results.append(result)
-            
-        except Exception as e:
-            logger.error(f"Error executing node {node_id}: {str(e)}")
-            results.append({
-                "node_id": node_id,
-                "status": "error",
-                "type": node_type,
-                "label": node_data.get('label', 'Unknown'),
-                "error": str(e)
-            })
-    
-    execution_time = round(time.time() - start_time, 2)
-    
-    return {
-        "status": "completed",
-        "nodes_executed": len(nodes),
-        "results": results,
-        "provider": provider,
-        "model": model,
-        "execution_time": f"{execution_time}s"
-    }
-
 # API Routes
 @app.get("/")
 async def root():
     return {
         "name": "AutonomOS API",
-        "version": "2.0.0",
+        "version": "2.1.0",
         "status": "running",
-        "security": "enhanced"
+        "features": [
+            "Enhanced execution engine",
+            "Data flow management",
+            "Logic execution (if/else, loops, parallel)",
+            "Trigger system",
+            "Context management"
+        ]
     }
 
 @app.get("/api/health")
 async def health_check():
     return {
         "status": "healthy",
-        "service": "AutonomOS API"
+        "service": "AutonomOS API",
+        "active_triggers": len(trigger_manager.active_triggers)
     }
 
 @app.post("/api/workflows/execute")
 @limiter.limit("10/minute")
 async def execute_workflow_endpoint(
-    request: Request,  # Required by SlowAPI - must be named 'request'
+    request: Request,
     x_api_provider: Optional[str] = Header(None),
     x_api_key: Optional[str] = Header(None),
     x_model: Optional[str] = Header(None)
 ):
-    """Execute a workflow with header-based API credentials."""
+    """Execute a workflow with enhanced execution engine."""
     
     if not x_api_provider or not x_api_key or not x_model:
         raise HTTPException(
             status_code=400,
-            detail="Missing required headers: X-API-Provider, X-API-Key, X-Model. Please configure your API credentials in Settings."
+            detail="Missing required headers: X-API-Provider, X-API-Key, X-Model"
         )
     
     try:
-        # Parse request body
         body = await request.json()
         request_data = WorkflowExecutionRequest(**body)
         
-        result = await execute_workflow(
-            request_data.nodes,
-            request_data.edges,
-            x_api_provider,
-            x_api_key,
-            x_model
+        # Validate workflow structure
+        validate_workflow_structure(
+            [node.model_dump() for node in request_data.nodes],
+            [edge.model_dump() for edge in request_data.edges]
         )
+        
+        # Build workflow object
+        workflow = {
+            'id': str(uuid.uuid4()),
+            'nodes': [node.model_dump() for node in request_data.nodes],
+            'edges': [edge.model_dump() for edge in request_data.edges]
+        }
+        
+        # AI configuration
+        ai_config = {
+            'provider': x_api_provider,
+            'apiKey': x_api_key,
+            'model': x_model
+        }
+        
+        # Execute with new engine
+        result = await workflow_executor.execute(workflow, ai_config)
+        
         return result
         
     except HTTPException:
@@ -340,14 +266,66 @@ async def execute_workflow_endpoint(
         logger.error(f"Workflow execution error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Workflow execution failed: {str(e)}")
 
+@app.post("/api/triggers/register")
+@limiter.limit("5/minute")
+async def register_trigger(
+    request: Request,
+    trigger_req: TriggerRegistrationRequest
+):
+    """Register a trigger for automated workflow execution."""
+    trigger_id = f"{trigger_req.workflow_id}_{trigger_req.trigger_type}"
+    
+    async def trigger_callback(tid: str, data: Dict[str, Any]):
+        logger.info(f"Trigger {tid} fired with data: {data}")
+        # Would execute workflow here
+    
+    success = await trigger_manager.register_trigger(
+        trigger_id,
+        trigger_req.trigger_type,
+        trigger_req.config,
+        trigger_callback
+    )
+    
+    if success:
+        return {
+            "status": "success",
+            "trigger_id": trigger_id,
+            "message": "Trigger registered successfully"
+        }
+    else:
+        raise HTTPException(status_code=400, detail="Failed to register trigger")
+
+@app.delete("/api/triggers/{trigger_id}")
+async def unregister_trigger(trigger_id: str):
+    """Unregister a trigger."""
+    success = await trigger_manager.unregister_trigger(trigger_id)
+    
+    if success:
+        return {"status": "success", "message": "Trigger unregistered"}
+    else:
+        raise HTTPException(status_code=404, detail="Trigger not found")
+
+@app.get("/api/triggers")
+async def list_triggers():
+    """List all active triggers."""
+    return {
+        "triggers": [
+            {
+                "id": tid,
+                "running": t.running,
+                "config": t.config
+            }
+            for tid, t in trigger_manager.active_triggers.items()
+        ]
+    }
+
 @app.post("/api/test-key")
 @limiter.limit("3/minute")
 async def test_api_key(
-    request: Request  # Required by SlowAPI
+    request: Request
 ):
     """Test if an API key is valid (rate limited)."""
     try:
-        # Parse request body
         body = await request.json()
         request_data = TestKeyRequest(**body)
         
@@ -401,6 +379,12 @@ async def get_available_models(provider: str):
         "provider": provider,
         "models": models.get(provider, [])
     }
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Clean up on shutdown."""
+    logger.info("Shutting down, stopping all triggers...")
+    await trigger_manager.stop_all()
 
 if __name__ == "__main__":
     import uvicorn
