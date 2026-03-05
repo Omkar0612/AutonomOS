@@ -1,46 +1,131 @@
-import React, { Component, ReactNode } from 'react'
+import { Component, ReactNode } from 'react'
+import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
 
-interface Props {
+interface ErrorBoundaryProps {
   children: ReactNode
+  fallback?: ReactNode
 }
 
-interface State {
+interface ErrorBoundaryState {
   hasError: boolean
   error: Error | null
+  errorInfo: React.ErrorInfo | null
 }
 
-class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
     super(props)
-    this.state = { hasError: false, error: null }
+    this.state = {
+      hasError: false,
+      error: null,
+      errorInfo: null
+    }
   }
 
-  static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error }
+  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
+    return { hasError: true }
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('Error caught by boundary:', error, errorInfo)
+    this.setState({
+      error,
+      errorInfo
+    })
+
+    // Log to console in development
+    if (import.meta.env.DEV) {
+      console.error('ErrorBoundary caught an error:', error, errorInfo)
+    }
+
+    // TODO: Send to error tracking service (Sentry, LogRocket, etc.)
+    // logErrorToService(error, errorInfo)
+  }
+
+  handleReset = () => {
+    this.setState({
+      hasError: false,
+      error: null,
+      errorInfo: null
+    })
   }
 
   render() {
     if (this.state.hasError) {
+      if (this.props.fallback) {
+        return this.props.fallback
+      }
+
       return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-6">
-          <div className="max-w-2xl w-full glass-strong rounded-2xl p-8">
-            <h1 className="text-3xl font-bold text-red-600 mb-4">⚠️ Something went wrong</h1>
-            <p className="text-slate-600 dark:text-slate-400 mb-4">
-              The application encountered an error. Please refresh the page.
-            </p>
-            <pre className="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg overflow-auto text-sm">
-              {this.state.error?.toString()}
-            </pre>
-            <button
-              onClick={() => window.location.reload()}
-              className="mt-6 px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors"
-            >
-              Reload Page
-            </button>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-6">
+          <div className="max-w-2xl w-full">
+            <div className="glass-strong rounded-2xl p-8 text-center">
+              {/* Icon */}
+              <div className="mb-6">
+                <div className="w-20 h-20 mx-auto rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                  <AlertTriangle className="w-10 h-10 text-red-600 dark:text-red-400" />
+                </div>
+              </div>
+
+              {/* Title */}
+              <h1 className="text-3xl font-bold mb-3 text-slate-900 dark:text-white">
+                Oops! Something went wrong
+              </h1>
+
+              {/* Description */}
+              <p className="text-slate-600 dark:text-slate-400 mb-6">
+                We encountered an unexpected error. Don't worry, your data is safe.
+              </p>
+
+              {/* Error Details (Development only) */}
+              {import.meta.env.DEV && this.state.error && (
+                <div className="mb-6 text-left">
+                  <details className="glass rounded-xl p-4">
+                    <summary className="cursor-pointer font-semibold text-sm text-slate-700 dark:text-slate-300 mb-2">
+                      Error Details (Dev Mode)
+                    </summary>
+                    <div className="text-xs font-mono text-red-600 dark:text-red-400 space-y-2">
+                      <div>
+                        <strong>Message:</strong>
+                        <pre className="mt-1 whitespace-pre-wrap break-words">
+                          {this.state.error.message}
+                        </pre>
+                      </div>
+                      {this.state.error.stack && (
+                        <div>
+                          <strong>Stack:</strong>
+                          <pre className="mt-1 whitespace-pre-wrap break-words text-xs">
+                            {this.state.error.stack}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  </details>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={() => window.location.href = '/'}
+                  className="btn-secondary flex items-center gap-2"
+                >
+                  <Home className="w-5 h-5" />
+                  Go Home
+                </button>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="btn-primary flex items-center gap-2"
+                >
+                  <RefreshCw className="w-5 h-5" />
+                  Reload Page
+                </button>
+              </div>
+
+              {/* Help Text */}
+              <p className="text-sm text-slate-500 dark:text-slate-500 mt-6">
+                If this problem persists, please contact support or check the console for more details.
+              </p>
+            </div>
           </div>
         </div>
       )
