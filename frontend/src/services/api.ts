@@ -1,106 +1,118 @@
-import axios, { AxiosInstance } from 'axios'
-import { Node, Edge } from 'reactflow'
+import axios, { AxiosInstance, AxiosError } from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
-class ApiService {
-  private client: AxiosInstance
+// Create axios instance
+const api: AxiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 60000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
 
-  constructor() {
-    this.client = axios.create({
-      baseURL: API_BASE_URL,
-      timeout: 30000,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
-
-    // Request interceptor to add API keys
-    this.client.interceptors.request.use((config) => {
-      const apiKeys = localStorage.getItem('autonomos-api-keys')
-      if (apiKeys) {
-        try {
-          const keys = JSON.parse(apiKeys)
-          const activeKey = keys.find((k: any) => k.isActive)
-          if (activeKey) {
-            config.headers['X-API-Provider'] = activeKey.provider
-            config.headers['X-API-Key'] = activeKey.apiKey
-            config.headers['X-Model'] = activeKey.model
-          }
-        } catch (e) {
-          console.error('Failed to parse API keys', e)
-        }
-      }
-      return config
-    })
-
-    // Response interceptor for error handling
-    this.client.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        console.error('API Error:', error.response?.data || error.message)
-        return Promise.reject(error)
-      }
-    )
+// Request interceptor
+api.interceptors.request.use(
+  (config) => {
+    // Add any auth tokens here if needed
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
   }
+)
 
-  // Workflow execution
-  async executeWorkflow(workflow: {
-    nodes: Array<{ id: string; type: string; data: any; position: any }>
-    edges: Array<{ id: string; source: string; target: string }>
-  }) {
-    const response = await this.client.post('/workflows/execute', workflow)
-    return response.data
+// Response interceptor
+api.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    // Handle errors globally
+    console.error('API Error:', error.response?.data || error.message)
+    return Promise.reject(error)
   }
+)
 
-  // Test API key
-  async testApiKey(provider: string, apiKey: string, model: string) {
-    try {
-      const response = await this.client.post('/test-key', {
-        provider,
-        apiKey,
-        model,
-      })
-      return response.data.success
-    } catch (error) {
-      return false
-    }
-  }
-
-  // Get available models
-  async getAvailableModels(provider: string) {
-    const response = await this.client.get(`/models/${provider}`)
-    return response.data
-  }
-
-  // Workflow management
-  async saveWorkflow(workflow: any) {
-    const response = await this.client.post('/workflows', workflow)
-    return response.data
-  }
-
-  async getWorkflows() {
-    const response = await this.client.get('/workflows')
-    return response.data
-  }
-
-  async getWorkflow(id: string) {
-    const response = await this.client.get(`/workflows/${id}`)
-    return response.data
-  }
-
-  async updateWorkflow(id: string, workflow: any) {
-    const response = await this.client.put(`/workflows/${id}`, workflow)
-    return response.data
-  }
-
-  async deleteWorkflow(id: string) {
-    const response = await this.client.delete(`/workflows/${id}`)
-    return response.data
-  }
+// Types
+export interface WorkflowNode {
+  id: string
+  type: string
+  data: Record<string, any>
+  position: { x: number; y: number }
 }
 
-export const apiService = new ApiService()
+export interface WorkflowEdge {
+  id: string
+  source: string
+  target: string
+  sourceHandle?: string
+  targetHandle?: string
+}
 
-// Export for backward compatibility
-export const executeWorkflow = (workflow: any) => apiService.executeWorkflow(workflow)
+export interface WorkflowExecutionRequest {
+  nodes: WorkflowNode[]
+  edges: WorkflowEdge[]
+}
+
+export interface WorkflowExecutionResult {
+  status: string
+  nodes_executed: number
+  results: Record<string, any>
+  provider: string
+  model: string
+}
+
+export interface ApiKeyConfig {
+  provider: string
+  apiKey: string
+  model: string
+}
+
+export interface TestKeyRequest {
+  provider: string
+  apiKey: string
+  model: string
+}
+
+export interface TestKeyResponse {
+  success: boolean
+  message: string
+  response?: string
+}
+
+// API Functions
+export const apiService = {
+  // Health check
+  async healthCheck(): Promise<{ status: string; service: string }> {
+    const response = await api.get('/api/health')
+    return response.data
+  },
+
+  // Execute workflow
+  async executeWorkflow(
+    request: WorkflowExecutionRequest,
+    apiConfig: ApiKeyConfig
+  ): Promise<WorkflowExecutionResult> {
+    const response = await api.post('/api/workflows/execute', request, {
+      headers: {
+        'X-API-Provider': apiConfig.provider,
+        'X-API-Key': apiConfig.apiKey,
+        'X-Model': apiConfig.model,
+      },
+    })
+    return response.data
+  },
+
+  // Test API key
+  async testApiKey(request: TestKeyRequest): Promise<TestKeyResponse> {
+    const response = await api.post('/api/test-key', request)
+    return response.data
+  },
+
+  // Get available models for a provider
+  async getModels(provider: string): Promise<{ provider: string; models: string[] }> {
+    const response = await api.get(`/api/models/${provider}`)
+    return response.data
+  },
+}
+
+export default api
