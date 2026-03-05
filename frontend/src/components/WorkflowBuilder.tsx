@@ -12,7 +12,7 @@ import ReactFlow, {
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Play, Save, Trash2, Sparkles, Settings as SettingsIcon, FileJson } from 'lucide-react'
+import { Play, Save, Trash2, Sparkles, Settings as SettingsIcon, FileJson, History } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
@@ -23,6 +23,7 @@ import ExecutionResultsPanel from './ExecutionResultsPanel'
 import { TriggerNode, AgentNode, ActionNode, LogicNode } from './nodes'
 import { apiService, WorkflowExecutionResult } from '../services/api'
 import { useApiKeys } from '../contexts/ApiKeyContext'
+import { useExecutionHistory } from '../contexts/ExecutionHistoryContext'
 import { exportWorkflowJSON } from '../utils/export'
 
 const initialNodes: Node[] = []
@@ -33,10 +34,12 @@ export default function WorkflowBuilder() {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
   const [selectedNode, setSelectedNode] = useState<Node | null>(null)
   const [showTemplates, setShowTemplates] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
   const [isExecuting, setIsExecuting] = useState(false)
   const [executionResult, setExecutionResult] = useState<WorkflowExecutionResult | null>(null)
   const [showResults, setShowResults] = useState(false)
   const { getActiveKey } = useApiKeys()
+  const { addExecution, executions } = useExecutionHistory()
 
   // Define custom node types
   const nodeTypes = useMemo(
@@ -146,10 +149,18 @@ export default function WorkflowBuilder() {
         setExecutionResult(result)
         setShowResults(true)
         
+        // Save to execution history
+        addExecution({
+          workflowName: 'Workflow ' + new Date().toLocaleString(),
+          result,
+          nodes,
+          edges
+        })
+        
         toast.success(
           <div>
             <div className="font-semibold">Workflow executed successfully!</div>
-            <div className="text-xs mt-1">Processed {result.nodes_executed} nodes</div>
+            <div className="text-xs mt-1">Processed {result.nodes_executed} nodes • Saved to history</div>
           </div>,
           { id: toastId, icon: '✅', duration: 4000 }
         )
@@ -265,6 +276,22 @@ export default function WorkflowBuilder() {
             </Link>
           )}
 
+          {/* History Button */}
+          <motion.button
+            onClick={() => setShowHistory(true)}
+            className="btn-secondary flex items-center gap-2 shadow-lg relative"
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <History className="w-5 h-5" />
+            <span className="hidden sm:inline">History</span>
+            {executions.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-purple-600 text-white text-xs rounded-full flex items-center justify-center">
+                {executions.length}
+              </span>
+            )}
+          </motion.button>
+
           <motion.button
             onClick={handleExportWorkflow}
             disabled={nodes.length === 0}
@@ -361,7 +388,7 @@ export default function WorkflowBuilder() {
           </ReactFlow>
         </motion.div>
 
-        {/* Execution Results Panel - Slides up from bottom */}
+        {/* Execution Results Panel - Slides up from bottom, overlays canvas */}
         <AnimatePresence>
           {showResults && executionResult && (
             <ExecutionResultsPanel
@@ -369,6 +396,82 @@ export default function WorkflowBuilder() {
               workflowName="workflow"
               onClose={() => setShowResults(false)}
             />
+          )}
+        </AnimatePresence>
+
+        {/* History Panel */}
+        <AnimatePresence>
+          {showHistory && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+              onClick={() => setShowHistory(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, y: 50 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 50 }}
+                onClick={(e) => e.stopPropagation()}
+                className="glass-strong rounded-2xl p-8 max-w-4xl w-full max-h-[80vh] overflow-y-auto"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-3xl font-bold">📜 Execution History</h2>
+                  <button
+                    onClick={() => setShowHistory(false)}
+                    className="btn-ghost"
+                  >
+                    Close
+                  </button>
+                </div>
+
+                {executions.length === 0 ? (
+                  <div className="text-center py-12">
+                    <History className="w-16 h-16 text-slate-300 dark:text-slate-700 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No executions yet</h3>
+                    <p className="text-slate-600 dark:text-slate-400">
+                      Execute a workflow to see it here
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {executions.map((exec) => (
+                      <div
+                        key={exec.id}
+                        className="glass rounded-xl p-4 hover:scale-[1.02] transition-transform cursor-pointer"
+                        onClick={() => {
+                          setExecutionResult(exec.result)
+                          setShowResults(true)
+                          setShowHistory(false)
+                          toast.success('Loaded execution from history', { icon: '📜' })
+                        }}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h3 className="font-semibold text-lg">{exec.workflowName}</h3>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                              {new Date(exec.timestamp).toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <span className="badge badge-info">
+                              {exec.nodes.length} nodes
+                            </span>
+                            <span className="badge badge-success">
+                              {exec.result.results.filter(r => r.status === 'success').length} success
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {exec.result.provider} • {exec.result.model?.split('/').pop()} • {exec.result.execution_time}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            </motion.div>
           )}
         </AnimatePresence>
 
