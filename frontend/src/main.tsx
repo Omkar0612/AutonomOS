@@ -7,6 +7,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { WorkflowProvider } from './contexts/WorkflowContext'
 import { ApiKeyProvider } from './contexts/ApiKeyContext'
+import { ExecutionHistoryProvider } from './contexts/ExecutionHistoryContext'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -19,9 +20,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <ThemeProvider>
         <AuthProvider>
           <ApiKeyProvider>
-            <WorkflowProvider>
-              <App />
-            </WorkflowProvider>
+            <ExecutionHistoryProvider>
+              <WorkflowProvider>
+                <App />
+              </WorkflowProvider>
+            </ExecutionHistoryProvider>
           </ApiKeyProvider>
         </AuthProvider>
       </ThemeProvider>
