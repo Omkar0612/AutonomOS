@@ -1,8 +1,11 @@
 import { X, Save, Sparkles } from 'lucide-react'
 import { Node } from 'reactflow'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useApiKeys, AI_PROVIDERS } from '../contexts/ApiKeyContext'
+import TriggerConfigPanel from './TriggerConfigPanel'
+import AgentConfigPanel from './AgentConfigPanel'
+import ActionConfigPanel from './ActionConfigPanel'
+import LogicConfigPanel from './LogicConfigPanel'
 
 interface NodePanelProps {
   node: Node
@@ -11,44 +14,48 @@ interface NodePanelProps {
 }
 
 export default function NodePanel({ node, onClose, onUpdate }: NodePanelProps) {
-  const { getActiveKey } = useApiKeys()
-  const activeKey = getActiveKey()
-  
   const [label, setLabel] = useState(node.data.label || '')
-  const [agentType, setAgentType] = useState(node.data.agentType || 'single')
-  const [pattern, setPattern] = useState(node.data.pattern || 'hierarchical')
-  const [model, setModel] = useState(node.data.model || activeKey?.model || 'openai/gpt-4-turbo-preview')
-  const [task, setTask] = useState(node.data.task || '')
 
-  // Update model when active key changes
-  useEffect(() => {
-    if (activeKey && !node.data.model) {
-      setModel(activeKey.model)
-    }
-  }, [activeKey, node.data.model])
-
-  // Get available models based on active provider
-  const getAvailableModels = () => {
-    if (!activeKey) {
-      return [{ value: 'openai/gpt-4-turbo-preview', label: 'GPT-4 Turbo (Configure API key in Settings)' }]
-    }
-    const provider = AI_PROVIDERS.find(p => p.id === activeKey.provider)
-    return provider?.models || []
-  }
-
-  const handleSave = () => {
+  const handleConfigUpdate = (config: any) => {
     const updatedNode = {
       ...node,
       data: {
         ...node.data,
         label,
-        agentType,
-        pattern,
-        model,
-        task,
+        ...config,
       },
     }
     onUpdate(updatedNode)
+  }
+
+  const getNodeIcon = () => {
+    switch (node.type) {
+      case 'trigger':
+        return '⚡'
+      case 'agent':
+        return '🤖'
+      case 'action':
+        return '⚙️'
+      case 'logic':
+        return '🔀'
+      default:
+        return '✨'
+    }
+  }
+
+  const getNodeTitle = () => {
+    switch (node.type) {
+      case 'trigger':
+        return 'Trigger Settings'
+      case 'agent':
+        return 'Agent Settings'
+      case 'action':
+        return 'Action Settings'
+      case 'logic':
+        return 'Logic Settings'
+      default:
+        return 'Node Settings'
+    }
   }
 
   return (
@@ -58,7 +65,7 @@ export default function NodePanel({ node, onClose, onUpdate }: NodePanelProps) {
         animate={{ x: 0, opacity: 1 }}
         exit={{ x: 320, opacity: 0 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="w-96 glass-strong border-l border-white/20 p-6 overflow-y-auto relative"
+        className="w-96 glass-strong border-l border-white/20 p-6 overflow-y-auto relative flex flex-col h-full"
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200 dark:border-slate-700">
@@ -67,8 +74,8 @@ export default function NodePanel({ node, onClose, onUpdate }: NodePanelProps) {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <Sparkles className="w-5 h-5 text-primary-600" />
-            Node Settings
+            <span className="text-2xl">{getNodeIcon()}</span>
+            {getNodeTitle()}
           </motion.h2>
           <motion.button
             onClick={onClose}
@@ -80,151 +87,68 @@ export default function NodePanel({ node, onClose, onUpdate }: NodePanelProps) {
           </motion.button>
         </div>
 
+        {/* Node Label (Common to all nodes) */}
         <motion.div 
-          className="space-y-5"
-          initial="hidden"
-          animate="show"
-          variants={{
-            hidden: { opacity: 0 },
-            show: {
-              opacity: 1,
-              transition: {
-                staggerChildren: 0.1
-              }
-            }
-          }}
+          className="mb-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
         >
-          {/* Label */}
-          <motion.div
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              show: { opacity: 1, y: 0 }
-            }}
-          >
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-              Label
-            </label>
-            <input
-              type="text"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              className="input-field"
-              placeholder="Node name"
+          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+            Node Label
+          </label>
+          <input
+            type="text"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            className="input-field"
+            placeholder="Enter a descriptive name"
+          />
+        </motion.div>
+
+        {/* Type-specific Configuration Panel */}
+        <motion.div 
+          className="flex-1 overflow-y-auto"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1 }}
+        >
+          {node.type === 'trigger' && (
+            <TriggerConfigPanel
+              onUpdate={handleConfigUpdate}
+              initialConfig={node.data}
             />
-          </motion.div>
-
-          {node.type === 'agent' && (
-            <>
-              {/* Agent Type */}
-              <motion.div
-                variants={{
-                  hidden: { opacity: 0, y: 20 },
-                  show: { opacity: 1, y: 0 }
-                }}
-              >
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  Agent Type
-                </label>
-                <select
-                  value={agentType}
-                  onChange={(e) => setAgentType(e.target.value)}
-                  className="input-field"
-                >
-                  <option value="single">Single Agent</option>
-                  <option value="multi">Multi-Agent System</option>
-                </select>
-              </motion.div>
-
-              {/* Pattern (only for multi-agent) */}
-              <AnimatePresence>
-                {agentType === 'multi' && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                      Pattern
-                    </label>
-                    <select
-                      value={pattern}
-                      onChange={(e) => setPattern(e.target.value)}
-                      className="input-field"
-                    >
-                      <option value="hierarchical">🏢 Hierarchical Team</option>
-                      <option value="swarm">🐝 Swarm Intelligence</option>
-                      <option value="council">👥 Council System</option>
-                    </select>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Model */}
-              <motion.div
-                variants={{
-                  hidden: { opacity: 0, y: 20 },
-                  show: { opacity: 1, y: 0 }
-                }}
-              >
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  AI Model
-                  {!activeKey && (
-                    <span className="ml-2 text-xs text-amber-600">(Configure in Settings)</span>
-                  )}
-                </label>
-                <select
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  className="input-field"
-                  disabled={!activeKey}
-                >
-                  {getAvailableModels().map(m => (
-                    <option key={m.value} value={m.value}>{m.label}</option>
-                  ))}
-                </select>
-                {activeKey && (
-                  <p className="text-xs text-slate-500 mt-1">
-                    Using {activeKey.provider} API key
-                  </p>
-                )}
-              </motion.div>
-
-              {/* Task */}
-              <motion.div
-                variants={{
-                  hidden: { opacity: 0, y: 20 },
-                  show: { opacity: 1, y: 0 }
-                }}
-              >
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  Task Description
-                </label>
-                <textarea
-                  value={task}
-                  onChange={(e) => setTask(e.target.value)}
-                  rows={5}
-                  className="input-field resize-none"
-                  placeholder="What should this agent do?"
-                />
-              </motion.div>
-            </>
           )}
 
-          {/* Save Button */}
-          <motion.button
-            onClick={handleSave}
-            className="btn-primary w-full flex items-center justify-center gap-2"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              show: { opacity: 1, y: 0 }
-            }}
-          >
-            <Save className="w-5 h-5" />
-            Save Changes
-          </motion.button>
+          {node.type === 'agent' && (
+            <AgentConfigPanel
+              onUpdate={handleConfigUpdate}
+              initialConfig={node.data}
+            />
+          )}
+
+          {node.type === 'action' && (
+            <ActionConfigPanel
+              onUpdate={handleConfigUpdate}
+              initialConfig={node.data}
+            />
+          )}
+
+          {node.type === 'logic' && (
+            <LogicConfigPanel
+              onUpdate={handleConfigUpdate}
+              initialConfig={node.data}
+            />
+          )}
+
+          {!['trigger', 'agent', 'action', 'logic'].includes(node.type || '') && (
+            <div className="text-center py-12">
+              <Sparkles className="w-16 h-16 text-slate-300 dark:text-slate-700 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Unknown Node Type</h3>
+              <p className="text-slate-600 dark:text-slate-400 text-sm">
+                No configuration available for this node type
+              </p>
+            </div>
+          )}
         </motion.div>
 
         {/* Decorative gradient */}
