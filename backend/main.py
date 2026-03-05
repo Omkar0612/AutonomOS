@@ -307,8 +307,7 @@ async def health_check():
 @app.post("/api/workflows/execute")
 @limiter.limit("10/minute")
 async def execute_workflow_endpoint(
-    request_data: WorkflowExecutionRequest,
-    http_request: Request,
+    request: Request,  # Required by SlowAPI - must be named 'request'
     x_api_provider: Optional[str] = Header(None),
     x_api_key: Optional[str] = Header(None),
     x_model: Optional[str] = Header(None)
@@ -322,6 +321,10 @@ async def execute_workflow_endpoint(
         )
     
     try:
+        # Parse request body
+        body = await request.json()
+        request_data = WorkflowExecutionRequest(**body)
+        
         result = await execute_workflow(
             request_data.nodes,
             request_data.edges,
@@ -340,11 +343,14 @@ async def execute_workflow_endpoint(
 @app.post("/api/test-key")
 @limiter.limit("3/minute")
 async def test_api_key(
-    request_data: TestKeyRequest,
-    http_request: Request
+    request: Request  # Required by SlowAPI
 ):
     """Test if an API key is valid (rate limited)."""
     try:
+        # Parse request body
+        body = await request.json()
+        request_data = TestKeyRequest(**body)
+        
         response = await call_ai_api(
             request_data.provider,
             request_data.apiKey,
