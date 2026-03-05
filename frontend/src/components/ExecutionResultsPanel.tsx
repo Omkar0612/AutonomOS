@@ -1,8 +1,7 @@
 import { motion } from 'framer-motion'
-import { X, FileText, FileSpreadsheet, FileBarChart, FileImage, Download, Copy, Check } from 'lucide-react'
-import { useState } from 'react'
-import toast from 'react-hot-toast'
+import { X, Copy, FileText, FileSpreadsheet, File, FileJson, Table, Markdown, Sparkles } from 'lucide-react'
 import { WorkflowExecutionResult } from '../services/api'
+import toast from 'react-hot-toast'
 import {
   exportToPDF,
   exportToWord,
@@ -10,252 +9,289 @@ import {
   exportToPowerPoint,
   exportToJSON,
   exportToCSV,
-  exportToMarkdown,
+  exportToMarkdown
 } from '../utils/export-advanced'
+import { 
+  exportFinalReportPDF,
+  exportFinalReportWord,
+  exportFinalReportPowerPoint,
+  synthesizeFinalReport
+} from '../utils/enhanced-export'
+import { useState } from 'react'
 
 interface ExecutionResultsPanelProps {
   result: WorkflowExecutionResult
-  workflowName?: string
+  workflowName: string
   onClose: () => void
 }
 
-export default function ExecutionResultsPanel({
-  result,
-  workflowName = 'workflow',
-  onClose,
-}: ExecutionResultsPanelProps) {
-  const [copied, setCopied] = useState(false)
-  const [exporting, setExporting] = useState<string | null>(null)
+export default function ExecutionResultsPanel({ result, workflowName, onClose }: ExecutionResultsPanelProps) {
+  const [showFinalReport, setShowFinalReport] = useState(false)
+  const [finalReportText, setFinalReportText] = useState('')
 
   const handleCopyAll = () => {
-    const text = Object.entries(result.results)
-      .map(([nodeId, res]: [string, any]) => {
-        return `Node: ${nodeId}\nStatus: ${res.status}\n${res.output || res.error || ''}\n---\n`
-      })
-      .join('\n')
-
-    navigator.clipboard.writeText(text)
-    setCopied(true)
-    toast.success('Results copied to clipboard!', { icon: '📋' })
-    setTimeout(() => setCopied(false), 2000)
+    const allResults = result.results
+      .map(r => `${r.node_id}:\n${r.output || r.error || 'No output'}\n`)
+      .join('\n---\n\n')
+    
+    navigator.clipboard.writeText(allResults)
+    toast.success('All results copied to clipboard!', { icon: '📋' })
   }
 
-  const handleExport = async (format: string) => {
-    setExporting(format)
-    try {
-      switch (format) {
-        case 'pdf':
-          await exportToPDF(result, workflowName)
-          break
-        case 'word':
-          await exportToWord(result, workflowName)
-          break
-        case 'excel':
-          await exportToExcel(result, workflowName)
-          break
-        case 'ppt':
-          await exportToPowerPoint(result, workflowName)
-          break
-        case 'json':
-          exportToJSON(result, workflowName)
-          break
-        case 'csv':
-          exportToCSV(result, workflowName)
-          break
-        case 'markdown':
-          exportToMarkdown(result, workflowName)
-          break
-      }
-      toast.success(
-        <div>
-          <div className="font-semibold">Exported successfully!</div>
-          <div className="text-xs mt-1">Check your downloads folder</div>
-        </div>,
-        { icon: '📥', duration: 3000 }
-      )
-    } catch (error: any) {
-      toast.error(`Export failed: ${error.message}`, { icon: '❌' })
-    } finally {
-      setExporting(null)
-    }
+  const handleViewFinalReport = () => {
+    const synthesized = synthesizeFinalReport(result)
+    setFinalReportText(synthesized)
+    setShowFinalReport(true)
+    toast.success('Final report synthesized!', { icon: '✨' })
   }
 
-  const exportButtons = [
-    { id: 'pdf', label: 'PDF', icon: FileText, color: 'text-red-600', description: 'Professional report' },
-    { id: 'word', label: 'Word', icon: FileText, color: 'text-blue-600', description: 'Editable document' },
-    { id: 'excel', label: 'Excel', icon: FileSpreadsheet, color: 'text-green-600', description: 'Data & charts' },
-    { id: 'ppt', label: 'PowerPoint', icon: FileBarChart, color: 'text-orange-600', description: 'Presentation' },
-    { id: 'json', label: 'JSON', icon: FileImage, color: 'text-purple-600', description: 'Raw data' },
-    { id: 'csv', label: 'CSV', icon: FileSpreadsheet, color: 'text-teal-600', description: 'Spreadsheet' },
-    { id: 'markdown', label: 'Markdown', icon: FileText, color: 'text-gray-600', description: 'Documentation' },
-  ]
+  const handleExportFinalPDF = () => {
+    exportFinalReportPDF(result, workflowName)
+    toast.success('Final report exported as PDF!', { icon: '📄' })
+  }
 
-  const successCount = Object.values(result.results).filter(
-    (r: any) => r.status === 'success'
-  ).length
-  const errorCount = Object.values(result.results).filter(
-    (r: any) => r.status === 'error'
-  ).length
+  const handleExportFinalWord = () => {
+    exportFinalReportWord(result, workflowName)
+    toast.success('Final report exported as Word!', { icon: '📝' })
+  }
+
+  const handleExportFinalPPT = () => {
+    exportFinalReportPowerPoint(result, workflowName)
+    toast.success('Final report exported as PowerPoint!', { icon: '📊' })
+  }
+
+  const successCount = result.results.filter(r => r.status === 'success').length
+  const errorCount = result.results.filter(r => r.status === 'error').length
 
   return (
     <motion.div
       initial={{ y: '100%' }}
       animate={{ y: 0 }}
       exit={{ y: '100%' }}
-      transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-      className="absolute bottom-0 left-0 right-0 h-2/3 glass-strong border-t-2 border-white/30 shadow-2xl overflow-hidden flex flex-col"
+      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+      className="absolute inset-x-0 bottom-0 h-2/3 glass-strong border-t border-white/20 shadow-2xl z-50 flex flex-col overflow-hidden"
     >
       {/* Header */}
-      <div className="glass-strong border-b border-white/20 p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <h2 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent">
-                🎯 Execution Results
-              </h2>
-              <span className={`badge ${
-                result.status === 'success' ? 'badge-success' : 'badge-error'
-              }`}>
-                {result.status}
-              </span>
-            </div>
-            
-            <div className="flex flex-wrap gap-4 text-sm">
-              <div className="flex items-center gap-2">
-                <span className="text-slate-500 dark:text-slate-400">Workflow:</span>
-                <span className="font-semibold">{workflowName}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-slate-500 dark:text-slate-400">Provider:</span>
-                <span className="font-semibold">{result.provider}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-slate-500 dark:text-slate-400">Model:</span>
-                <span className="font-semibold text-xs">{result.model.split('/').pop()}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-slate-500 dark:text-slate-400">Nodes:</span>
-                <span className="font-semibold">{result.nodes_executed}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                <span className="text-green-600 dark:text-green-400 font-semibold">{successCount}</span>
-                <span className="w-2 h-2 rounded-full bg-red-500 ml-2"></span>
-                <span className="text-red-600 dark:text-red-400 font-semibold">{errorCount}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <motion.button
-              onClick={handleCopyAll}
-              className="btn-ghost p-2"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              {copied ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5" />}
-            </motion.button>
-            <motion.button
-              onClick={onClose}
-              className="btn-ghost p-2"
-              whileHover={{ scale: 1.1, rotate: 90 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <X className="w-5 h-5" />
-            </motion.button>
+      <div className="flex items-center justify-between p-6 border-b border-white/10">
+        <div>
+          <h2 className="text-2xl font-bold mb-1">🚀 Execution Results</h2>
+          <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
+            <span>✅ {successCount} Success</span>
+            {errorCount > 0 && <span className="text-red-600">❌ {errorCount} Errors</span>}
+            <span>⚡ {result.execution_time || 'N/A'}</span>
+            <span>🤖 {result.provider} - {result.model?.split('/').pop() || 'Unknown'}</span>
           </div>
         </div>
-
-        {/* Export Buttons */}
-        <div className="mt-4 flex flex-wrap gap-2">
-          {exportButtons.map((btn) => (
-            <motion.button
-              key={btn.id}
-              onClick={() => handleExport(btn.id)}
-              disabled={exporting !== null}
-              className={`btn-ghost flex items-center gap-2 px-3 py-2 text-sm ${
-                exporting === btn.id ? 'animate-pulse' : ''
-              }`}
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <btn.icon className={`w-4 h-4 ${btn.color}`} />
-              <div className="text-left">
-                <div className="font-semibold">{btn.label}</div>
-                <div className="text-xs opacity-75">{btn.description}</div>
-              </div>
-              {exporting === btn.id && (
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                  className="ml-2"
-                >
-                  <Download className="w-4 h-4" />
-                </motion.div>
-              )}
-            </motion.button>
-          ))}
+        <div className="flex items-center gap-2">
+          <motion.button
+            onClick={handleCopyAll}
+            className="btn-ghost text-sm"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Copy className="w-4 h-4 mr-2" />
+            Copy All
+          </motion.button>
+          <motion.button
+            onClick={onClose}
+            className="btn-ghost text-sm"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <X className="w-5 h-5" />
+          </motion.button>
         </div>
       </div>
 
+      {/* Export Buttons */}
+      <div className="flex flex-wrap items-center gap-2 p-4 border-b border-white/10 bg-white/5">
+        {/* Final Report Button (NEW!) */}
+        <motion.button
+          onClick={handleViewFinalReport}
+          className="btn-primary flex items-center gap-2 text-sm glow"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <Sparkles className="w-4 h-4" />
+          Final Report
+        </motion.button>
+
+        <div className="h-6 w-px bg-white/20 mx-1" />
+
+        {/* Individual Exports */}
+        <motion.button
+          onClick={() => { exportToPDF(result, workflowName); toast.success('Exported as PDF!', { icon: '📄' }) }}
+          className="btn-secondary flex items-center gap-2 text-sm"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <FileText className="w-4 h-4" />
+          PDF
+        </motion.button>
+
+        <motion.button
+          onClick={() => { exportToWord(result, workflowName); toast.success('Exported as Word!', { icon: '📝' }) }}
+          className="btn-secondary flex items-center gap-2 text-sm"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <File className="w-4 h-4" />
+          Word
+        </motion.button>
+
+        <motion.button
+          onClick={() => { exportToExcel(result, workflowName); toast.success('Exported as Excel!', { icon: '📊' }) }}
+          className="btn-secondary flex items-center gap-2 text-sm"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <FileSpreadsheet className="w-4 h-4" />
+          Excel
+        </motion.button>
+
+        <motion.button
+          onClick={() => { exportToPowerPoint(result, workflowName); toast.success('Exported as PowerPoint!', { icon: '📊' }) }}
+          className="btn-secondary flex items-center gap-2 text-sm"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <FileSpreadsheet className="w-4 h-4" />
+          PowerPoint
+        </motion.button>
+
+        <motion.button
+          onClick={() => { exportToJSON(result, workflowName); toast.success('Exported as JSON!', { icon: '🔧' }) }}
+          className="btn-secondary flex items-center gap-2 text-sm"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <FileJson className="w-4 h-4" />
+          JSON
+        </motion.button>
+
+        <motion.button
+          onClick={() => { exportToCSV(result, workflowName); toast.success('Exported as CSV!', { icon: '📉' }) }}
+          className="btn-secondary flex items-center gap-2 text-sm"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <Table className="w-4 h-4" />
+          CSV
+        </motion.button>
+
+        <motion.button
+          onClick={() => { exportToMarkdown(result, workflowName); toast.success('Exported as Markdown!', { icon: '📋' }) }}
+          className="btn-secondary flex items-center gap-2 text-sm"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <Markdown className="w-4 h-4" />
+          Markdown
+        </motion.button>
+      </div>
+
+      {/* Final Report Export Buttons (shown when viewing final report) */}
+      {showFinalReport && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-2 p-3 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-b border-white/10"
+        >
+          <Sparkles className="w-4 h-4 text-purple-500" />
+          <span className="text-sm font-medium">Export Final Report:</span>
+          <button onClick={handleExportFinalPDF} className="btn-ghost text-xs py-1 px-3">
+            📄 PDF
+          </button>
+          <button onClick={handleExportFinalWord} className="btn-ghost text-xs py-1 px-3">
+            📝 Word
+          </button>
+          <button onClick={handleExportFinalPPT} className="btn-ghost text-xs py-1 px-3">
+            📊 PowerPoint
+          </button>
+        </motion.div>
+      )}
+
       {/* Results Content */}
-      <div className="flex-1 overflow-auto p-6">
-        <div className="space-y-4">
-          {Object.entries(result.results).map(([nodeId, nodeResult]: [string, any], index) => (
+      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        {showFinalReport ? (
+          /* Final Synthesized Report View */
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass-strong rounded-xl p-6"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold flex items-center gap-2">
+                <Sparkles className="w-6 h-6 text-purple-500" />
+                Final Synthesized Report
+              </h3>
+              <button
+                onClick={() => setShowFinalReport(false)}
+                className="btn-ghost text-sm"
+              >
+                View Individual Outputs
+              </button>
+            </div>
+            <pre className="whitespace-pre-wrap text-sm leading-relaxed font-mono bg-slate-50 dark:bg-slate-900/50 p-6 rounded-lg overflow-x-auto">
+              {finalReportText}
+            </pre>
+          </motion.div>
+        ) : (
+          /* Individual Agent Outputs */
+          result.results.map((r, index) => (
             <motion.div
-              key={nodeId}
+              key={index}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="glass rounded-xl p-6 border border-white/20 hover:border-white/40 transition-all"
+              className="glass-strong rounded-xl p-6"
             >
               <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
+                <div>
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-bold">{nodeId}</h3>
+                    <h3 className="text-lg font-bold">📦 {r.node_id}</h3>
                     <span className={`badge ${
-                      nodeResult.status === 'success' ? 'badge-success' : 'badge-error'
+                      r.status === 'success' ? 'badge-success' :
+                      r.status === 'error' ? 'badge-error' :
+                      'badge-warning'
                     }`}>
-                      {nodeResult.status}
+                      {r.status === 'success' ? '✅ SUCCESS' : r.status === 'error' ? '❌ ERROR' : '⏳ PENDING'}
                     </span>
-                    {nodeResult.type && (
-                      <span className="badge badge-secondary">{nodeResult.type}</span>
-                    )}
+                    <span className="text-xs px-2 py-1 rounded-lg bg-slate-200 dark:bg-slate-800">
+                      {r.node_id.split('-')[0]}
+                    </span>
                   </div>
-                  {nodeResult.task && (
-                    <p className="text-sm text-slate-600 dark:text-slate-400 italic">
-                      Task: {nodeResult.task}
+                  {r.task && (
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      <strong>Task:</strong> {r.task}
                     </p>
                   )}
                 </div>
+                {r.execution_time && (
+                  <span className="text-xs text-slate-500">⚡ {r.execution_time}</span>
+                )}
               </div>
 
-              {nodeResult.output && (
-                <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-1 h-4 bg-green-500 rounded"></div>
-                    <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase">Output</span>
+              {r.output && (
+                <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4">
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">OUTPUT:</p>
+                  <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                    {r.output}
                   </div>
-                  <pre className="text-sm whitespace-pre-wrap break-words font-mono">
-                    {nodeResult.output}
-                  </pre>
                 </div>
               )}
 
-              {nodeResult.error && (
-                <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-1 h-4 bg-red-500 rounded"></div>
-                    <span className="text-xs font-semibold text-red-600 dark:text-red-400 uppercase">Error</span>
+              {r.error && (
+                <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
+                  <p className="text-xs font-semibold text-red-600 dark:text-red-400 mb-2">ERROR:</p>
+                  <div className="text-sm text-red-700 dark:text-red-300">
+                    {r.error}
                   </div>
-                  <pre className="text-sm whitespace-pre-wrap break-words font-mono text-red-700 dark:text-red-300">
-                    {nodeResult.error}
-                  </pre>
                 </div>
               )}
             </motion.div>
-          ))}
-        </div>
+          ))
+        )}
       </div>
     </motion.div>
   )
