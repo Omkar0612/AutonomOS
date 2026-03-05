@@ -13,23 +13,57 @@ export const AI_PROVIDERS = [
   {
     id: 'openrouter',
     name: 'OpenRouter',
-    description: 'Access 200+ AI models including 24 FREE models (no card needed) - Recommended',
+    description: 'Access 200+ AI models including 40+ FREE models (no card needed) - Recommended',
     models: [
-      // ⭐ BEST FREE MODELS (2026)
+      // ⭐ BEST FREE MODELS (March 2026 - Updated)
       { value: 'google/gemini-2.0-flash-exp:free', label: '🆓 Gemini 2.0 Flash (1M context, experimental)', free: true },
+      { value: 'google/gemma-3-27b-it:free', label: '🆓 Gemma 3 27B (multimodal, NEW)', free: true },
       { value: 'meta-llama/llama-3.3-70b-instruct:free', label: '🆓 Llama 3.3 70B (GPT-4 level)', free: true },
       { value: 'meta-llama/llama-3.1-405b-instruct:free', label: '🆓 Llama 3.1 405B (most capable)', free: true },
+      
+      // 💻 CODING SPECIALISTS
       { value: 'mistralai/devstral-2512:free', label: '🆓 Devstral 2 (best for coding)', free: true },
       { value: 'qwen/qwen3-coder-480b:free', label: '🆓 Qwen3-Coder 480B (coding)', free: true },
+      { value: 'qwen/qwen3-coder-480b-a35b:free', label: '🆓 Qwen3-Coder 480B A35B (NEW)', free: true },
+      
+      // 🧠 REASONING & THINKING
       { value: 'deepseek/deepseek-r1:free', label: '🆓 DeepSeek R1 (reasoning)', free: true },
       { value: 'deepseek/deepseek-chat:free', label: '🆓 DeepSeek Chat (general)', free: true },
-      { value: 'nvidia/nemotron-3-nano-30b:free', label: '🆓 Nemotron 3 Nano (AI agents)', free: true },
+      { value: 'liquid/lfm-2.5-1.2b-thinking:free', label: '🆓 LFM2.5 1.2B (reasoning)', free: true },
+      { value: 'liquidai/lfm2.5-1.2b-thinking:free', label: '🆓 LiquidAI LFM2.5 1.2B Thinking (NEW)', free: true },
+      { value: 'qwen/qwen3-235b-a22b-thinking-2507:free', label: '🆓 Qwen3 235B Thinking (NEW)', free: true },
+      { value: 'qwen/qwen3-vl-235b-a22b-thinking:free', label: '🆓 Qwen3 VL 235B Thinking (NEW)', free: true },
+      { value: 'qwen/qwen3-vl-30b-a3b-thinking:free', label: '🆓 Qwen3 VL 30B Thinking (NEW)', free: true },
+      
+      // 🚀 ULTRA-LARGE MODELS (500B+)
+      { value: 'stepfun/step-3.5-flash:free', label: '🆓 StepFun Step 3.5 Flash 533B (NEW)', free: true },
+      { value: 'arcee-ai/trinity-large-preview:free', label: '🆓 Arcee AI Trinity Large 574B (NEW)', free: true },
+      { value: 'nous-research/hermes-3-405b:free', label: '🆓 Hermes 3 405B (instruction)', free: true },
+      
+      // 🎯 FAST & EFFICIENT
       { value: 'mistralai/mistral-small-3.1:free', label: '🆓 Mistral Small 3.1 (fast)', free: true },
       { value: 'mistralai/mistral-7b-instruct:free', label: '🆓 Mistral 7B (lightweight)', free: true },
-      { value: 'nous-research/hermes-3-405b:free', label: '🆓 Hermes 3 405B (instruction)', free: true },
-      { value: 'google/gemma-3-27b-it:free', label: '🆓 Gemma 3 27B (multimodal)', free: true },
-      { value: 'liquid/lfm-2.5-1.2b-thinking:free', label: '🆓 LFM2.5 1.2B (reasoning)', free: true },
-      { value: 'qwen/qwen-2.5-vl-7b-instruct:free', label: '🆓 Qwen 2.5 VL (vision)', free: true },
+      { value: 'bytedance/seed-seedream-4.5:free', label: '🆓 ByteDance Seed Seedream 4.5 (NEW)', free: true },
+      { value: 'sourceful/riverflow-v2-fast:free', label: '🆓 Sourceful Riverflow V2 Fast (NEW)', free: true },
+      { value: 'sourceful/riverflow-v2-fast-preview:free', label: '🆓 Sourceful Riverflow V2 Fast Preview (NEW)', free: true },
+      { value: 'sourceful/riverflow-v2-pro:free', label: '🆓 Sourceful Riverflow V2 Pro (NEW)', free: true },
+      { value: 'sourceful/riverflow-v2-max-preview:free', label: '🆓 Sourceful Riverflow V2 Max Preview (NEW)', free: true },
+      
+      // 🤖 AI AGENTS & SPECIALIZED
+      { value: 'nvidia/nemotron-3-nano-30b:free', label: '🆓 Nemotron 3 Nano 30B (AI agents)', free: true },
+      { value: 'nvidia/nemotron-nano-9b-v2:free', label: '🆓 Nemotron Nano 9B V2 (NEW)', free: true },
+      { value: 'nvidia/nemotron-nano-12b-2-vl:free', label: '🆓 Nemotron Nano 12B 2 VL (NEW)', free: true },
+      { value: 'venice/uncensored:free', label: '🆓 Venice Uncensored 237M (NEW)', free: true },
+      { value: 'arcee-ai/trinity-mini:free', label: '🆓 Arcee AI Trinity Mini 6.96B (NEW)', free: true },
+      
+      // 🌐 MULTILINGUAL & VISION
+      { value: 'qwen/qwen-2.5-vl-7b-instruct:free', label: '🆓 Qwen 2.5 VL 7B (vision)', free: true },
+      { value: 'qwen/qwen3-next-80b-a3b-instruct:free', label: '🆓 Qwen3 Next 80B A3B (NEW)', free: true },
+      { value: 'qwen/qwen3-4b:free', label: '🆓 Qwen3 4B (NEW)', free: true },
+      { value: 'z.ai/glm-4.5-air:free', label: '🆓 Z.ai GLM 4.5 Air 61.2B (NEW)', free: true },
+      { value: 'meta-llama/llama-3.2-3b-instruct:free', label: '🆓 Llama 3.2 3B (lightweight)', free: true },
+      { value: 'openai/gpt-oss-120b:free', label: '🆓 OpenAI GPT-OSS 120B (NEW)', free: true },
+      { value: 'openai/gpt-oss-20b:free', label: '🆓 OpenAI GPT-OSS 20B (NEW)', free: true },
       
       // 💎 PREMIUM MODELS (Paid)
       { value: 'openai/gpt-4-turbo', label: 'GPT-4 Turbo (paid)', free: false },
@@ -102,6 +136,7 @@ export const RECOMMENDED_FREE_MODELS = [
     models: [
       'mistralai/devstral-2512:free',
       'qwen/qwen3-coder-480b:free',
+      'qwen/qwen3-coder-480b-a35b:free',
     ]
   },
   {
@@ -109,6 +144,8 @@ export const RECOMMENDED_FREE_MODELS = [
     models: [
       'meta-llama/llama-3.3-70b-instruct:free',
       'meta-llama/llama-3.1-405b-instruct:free',
+      'stepfun/step-3.5-flash:free', // 533B params
+      'arcee-ai/trinity-large-preview:free', // 574B params
     ]
   },
   {
@@ -122,6 +159,7 @@ export const RECOMMENDED_FREE_MODELS = [
     models: [
       'deepseek/deepseek-r1:free',
       'liquid/lfm-2.5-1.2b-thinking:free',
+      'qwen/qwen3-235b-a22b-thinking-2507:free',
     ]
   },
   {
@@ -129,6 +167,15 @@ export const RECOMMENDED_FREE_MODELS = [
     models: [
       'mistralai/mistral-small-3.1:free',
       'mistralai/mistral-7b-instruct:free',
+      'sourceful/riverflow-v2-fast:free',
+    ]
+  },
+  {
+    name: 'Vision & Multimodal',
+    models: [
+      'google/gemma-3-27b-it:free',
+      'qwen/qwen-2.5-vl-7b-instruct:free',
+      'qwen/qwen3-vl-235b-a22b-thinking:free',
     ]
   },
 ]
