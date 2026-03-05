@@ -12,17 +12,18 @@ import ReactFlow, {
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Play, Save, Trash2, Sparkles, Settings as SettingsIcon, Download, FileJson } from 'lucide-react'
+import { Play, Save, Trash2, Sparkles, Settings as SettingsIcon, FileJson } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
 import Sidebar from './Sidebar'
 import NodePanel from './NodePanel'
 import TemplatesPanel from './TemplatesPanel'
+import ExecutionResultsPanel from './ExecutionResultsPanel'
 import { TriggerNode, AgentNode, ActionNode, LogicNode } from './nodes'
 import { apiService, WorkflowExecutionResult } from '../services/api'
 import { useApiKeys } from '../contexts/ApiKeyContext'
-import { exportWorkflowJSON, exportResults } from '../utils/export'
+import { exportWorkflowJSON } from '../utils/export'
 
 const initialNodes: Node[] = []
 const initialEdges: Edge[] = []
@@ -136,10 +137,9 @@ export default function WorkflowBuilder() {
       }
 
       try {
-        // Pass API key config to backend - FIX: use activeKey.apiKey not activeKey.key
         const result = await apiService.executeWorkflow(workflow, {
           provider: activeKey.provider,
-          apiKey: activeKey.apiKey,  // ← FIXED: was activeKey.key
+          apiKey: activeKey.apiKey,
           model: activeKey.model,
         })
         
@@ -150,22 +150,19 @@ export default function WorkflowBuilder() {
           <div>
             <div className="font-semibold">Workflow executed successfully!</div>
             <div className="text-xs mt-1">Processed {result.nodes_executed} nodes</div>
-            <div className="text-xs mt-1 opacity-75">Click "View Results" to see output</div>
           </div>,
-          { id: toastId, icon: '✅', duration: 6000 }
+          { id: toastId, icon: '✅', duration: 4000 }
         )
         
         console.log('Workflow result:', result)
       } catch (apiError: any) {
-        // Backend not running - show mock success for demo
         if (apiError.code === 'ERR_NETWORK' || apiError.message?.includes('Network Error')) {
           toast.success(
             <div>
               <div className="font-semibold">Workflow validated! (Demo Mode)</div>
               <div className="text-xs mt-1">Backend not connected - workflow structure is valid</div>
-              <div className="text-xs mt-2 opacity-75">Start backend: <code className="bg-black/10 px-1 rounded">cd backend && python3 main.py</code></div>
             </div>,
-            { id: toastId, icon: '✅', duration: 8000 }
+            { id: toastId, icon: '✅', duration: 6000 }
           )
         } else {
           throw apiError
@@ -222,15 +219,6 @@ export default function WorkflowBuilder() {
     toast.success('Workflow exported!', { icon: '📥' })
   }
 
-  const handleExportResults = (format: 'json' | 'csv' | 'markdown' | 'html') => {
-    if (!executionResult) {
-      toast.error('No results to export!', { icon: '⚠️' })
-      return
-    }
-    exportResults(executionResult, format, 'workflow')
-    toast.success(`Results exported as ${format.toUpperCase()}!`, { icon: '📥' })
-  }
-
   const loadTemplate = (template: { nodes: Node[]; edges: Edge[] }) => {
     setNodes(template.nodes)
     setEdges(template.edges)
@@ -238,7 +226,6 @@ export default function WorkflowBuilder() {
     toast.success('Template loaded!', { icon: '📋' })
   }
 
-  // Get active API key info
   const activeKey = getActiveKey()
 
   return (
@@ -335,19 +322,6 @@ export default function WorkflowBuilder() {
               </>
             )}
           </motion.button>
-
-          {/* Results Button */}
-          {executionResult && (
-            <motion.button
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              onClick={() => setShowResults(!showResults)}
-              className="btn-secondary flex items-center gap-2 shadow-lg"
-            >
-              <Download className="w-5 h-5" />
-              Results
-            </motion.button>
-          )}
         </motion.div>
 
         {/* React Flow Canvas */}
@@ -387,75 +361,14 @@ export default function WorkflowBuilder() {
           </ReactFlow>
         </motion.div>
 
-        {/* Execution Results Panel */}
+        {/* Execution Results Panel - NEW */}
         <AnimatePresence>
           {showResults && executionResult && (
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              className="absolute bottom-0 left-0 right-0 h-1/3 glass-strong border-t border-white/20 p-6 overflow-auto"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold">Execution Results</h3>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleExportResults('json')}
-                    className="btn-ghost text-sm"
-                  >
-                    JSON
-                  </button>
-                  <button
-                    onClick={() => handleExportResults('csv')}
-                    className="btn-ghost text-sm"
-                  >
-                    CSV
-                  </button>
-                  <button
-                    onClick={() => handleExportResults('markdown')}
-                    className="btn-ghost text-sm"
-                  >
-                    Markdown
-                  </button>
-                  <button
-                    onClick={() => handleExportResults('html')}
-                    className="btn-ghost text-sm"
-                  >
-                    HTML
-                  </button>
-                  <button
-                    onClick={() => setShowResults(false)}
-                    className="btn-ghost text-sm"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-3">
-                {Object.entries(executionResult.results).map(([nodeId, result]: [string, any]) => (
-                  <div key={nodeId} className="glass rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-semibold">Node: {nodeId}</span>
-                      <span className={`badge ${
-                        result.status === 'success' ? 'badge-success' : 'badge-error'
-                      }`}>
-                        {result.status}
-                      </span>
-                    </div>
-                    {result.output && (
-                      <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
-                        {result.output}
-                      </p>
-                    )}
-                    {result.error && (
-                      <p className="text-sm text-red-600 dark:text-red-400 mt-2">
-                        Error: {result.error}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </motion.div>
+            <ExecutionResultsPanel
+              result={executionResult}
+              workflowName="workflow"
+              onClose={() => setShowResults(false)}
+            />
           )}
         </AnimatePresence>
 
