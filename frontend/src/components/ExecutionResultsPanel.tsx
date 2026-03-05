@@ -29,8 +29,11 @@ export default function ExecutionResultsPanel({ result, workflowName, onClose }:
   const [showFinalReport, setShowFinalReport] = useState(false)
   const [finalReportText, setFinalReportText] = useState('')
 
+  // Safety check - ensure result.results is an array
+  const results = Array.isArray(result?.results) ? result.results : []
+
   const handleCopyAll = () => {
-    const allResults = result.results
+    const allResults = results
       .map(r => `${r.node_id}:\n${r.output || r.error || 'No output'}\n`)
       .join('\n---\n\n')
     
@@ -60,8 +63,8 @@ export default function ExecutionResultsPanel({ result, workflowName, onClose }:
     toast.success('Final report exported as PowerPoint!', { icon: '📊' })
   }
 
-  const successCount = result.results.filter(r => r.status === 'success').length
-  const errorCount = result.results.filter(r => r.status === 'error').length
+  const successCount = results.filter(r => r.status === 'success').length
+  const errorCount = results.filter(r => r.status === 'error').length
 
   return (
     <motion.div
@@ -236,9 +239,18 @@ export default function ExecutionResultsPanel({ result, workflowName, onClose }:
               {finalReportText}
             </pre>
           </motion.div>
+        ) : results.length === 0 ? (
+          /* Empty State */
+          <div className="text-center py-12">
+            <Sparkles className="w-16 h-16 text-slate-300 dark:text-slate-700 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No results to display</h3>
+            <p className="text-slate-600 dark:text-slate-400">
+              The workflow didn't produce any output
+            </p>
+          </div>
         ) : (
           /* Individual Agent Outputs */
-          result.results.map((r, index) => (
+          results.map((r, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, y: 20 }}
@@ -258,7 +270,7 @@ export default function ExecutionResultsPanel({ result, workflowName, onClose }:
                       {r.status === 'success' ? '✅ SUCCESS' : r.status === 'error' ? '❌ ERROR' : '⏳ PENDING'}
                     </span>
                     <span className="text-xs px-2 py-1 rounded-lg bg-slate-200 dark:bg-slate-800">
-                      {r.node_id.split('-')[0]}
+                      {r.node_id?.split('-')[0] || 'node'}
                     </span>
                   </div>
                   {r.task && (
