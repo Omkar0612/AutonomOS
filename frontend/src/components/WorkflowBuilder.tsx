@@ -436,38 +436,46 @@ export default function WorkflowBuilder() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {executions.map((exec) => (
-                      <div
-                        key={exec.id}
-                        className="glass rounded-xl p-4 hover:scale-[1.02] transition-transform cursor-pointer"
-                        onClick={() => {
-                          setExecutionResult(exec.result)
-                          setShowResults(true)
-                          setShowHistory(false)
-                          toast.success('Loaded execution from history', { icon: '📜' })
-                        }}
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <h3 className="font-semibold text-lg">{exec.workflowName}</h3>
-                            <p className="text-sm text-slate-600 dark:text-slate-400">
-                              {new Date(exec.timestamp).toLocaleString()}
-                            </p>
+                    {executions.map((exec) => {
+                      // Safe access to results array
+                      const results = Array.isArray(exec.result?.results) ? exec.result.results : []
+                      const successCount = results.filter(r => r.status === 'success').length
+                      
+                      return (
+                        <div
+                          key={exec.id}
+                          className="glass rounded-xl p-4 hover:scale-[1.02] transition-transform cursor-pointer"
+                          onClick={() => {
+                            setExecutionResult(exec.result)
+                            setShowResults(true)
+                            setShowHistory(false)
+                            toast.success('Loaded execution from history', { icon: '📜' })
+                          }}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <h3 className="font-semibold text-lg">{exec.workflowName}</h3>
+                              <p className="text-sm text-slate-600 dark:text-slate-400">
+                                {new Date(exec.timestamp).toLocaleString()}
+                              </p>
+                            </div>
+                            <div className="flex gap-2">
+                              <span className="badge badge-info">
+                                {exec.nodes.length} nodes
+                              </span>
+                              {results.length > 0 && (
+                                <span className="badge badge-success">
+                                  {successCount} success
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex gap-2">
-                            <span className="badge badge-info">
-                              {exec.nodes.length} nodes
-                            </span>
-                            <span className="badge badge-success">
-                              {exec.result.results.filter(r => r.status === 'success').length} success
-                            </span>
+                          <div className="text-xs text-slate-500">
+                            {exec.result.provider} • {exec.result.model?.split('/').pop()} • {exec.result.execution_time}
                           </div>
                         </div>
-                        <div className="text-xs text-slate-500">
-                          {exec.result.provider} • {exec.result.model?.split('/').pop()} • {exec.result.execution_time}
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </motion.div>
