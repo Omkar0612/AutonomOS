@@ -19,6 +19,7 @@
     "axios": "^1.6.5",
     "react-hot-toast": "^2.4.1",
     "clsx": "^2.1.0",
+    "tailwind-merge": "^2.2.0",
     "jspdf": "^2.5.1",
     "docx": "^8.5.0",
     "file-saver": "^2.0.5",
