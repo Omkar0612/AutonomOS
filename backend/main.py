@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, validator
 from typing import Optional, List, Dict, Any
@@ -7,16 +7,9 @@ import os
 from dotenv import load_dotenv
 import logging
 from slowapi.errors import RateLimitExceeded
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
-# Import security modules
-from auth import (
-    get_current_user,
-    TokenData,
-    UserCredentials,
-    store_user_credentials,
-    get_user_credentials
-)
-from rate_limiter import limiter, rate_limit_exceeded_handler
 from validators import (
     sanitize_html,
     validate_workflow_node,
@@ -37,9 +30,20 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# Add rate limiter state
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+
+# Rate limit handler
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request, exc):
+    return JSONResponse(
+        status_code=429,
+        content={
+            "error": "Rate limit exceeded",
+            "detail": "Too many requests. Please try again later."
+        }
+    )
 
 # CORS middleware with strict validation
 allowed_origins = [origin.strip() for origin in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")]
@@ -61,7 +65,6 @@ class WorkflowNode(BaseModel):
     @validator('data')
     def validate_node_data(cls, v, values):
         """Validate and sanitize node data."""
-        # Sanitize text fields
         if 'task' in v:
             v['task'] = sanitize_html(v['task'])
         if 'label' in v:
@@ -79,19 +82,11 @@ class WorkflowExecutionRequest(BaseModel):
     
     @validator('nodes')
     def validate_nodes(cls, v, values):
-        """Validate workflow structure."""
         if not v:
             raise ValueError("Workflow must contain at least one node")
         return v
 
 class TestKeyRequest(BaseModel):
-    provider: str
-    apiKey: str
-    model: str
-
-class AuthRequest(BaseModel):
-    """Authentication request with user credentials."""
-    user_id: str
     provider: str
     apiKey: str
     model: str
@@ -112,7 +107,6 @@ AI_PROVIDERS = {
     },
 }
 
-# Helper function to call AI API
 async def call_ai_api(
     provider: str,
     api_key: str,
@@ -130,7 +124,6 @@ async def call_ai_api(
     
     headers = {"Content-Type": "application/json"}
     
-    # Provider-specific headers
     if provider == "openrouter":
         headers["Authorization"] = f"Bearer {api_key}"
         headers["HTTP-Referer"] = "https://autonomos.ai"
@@ -141,7 +134,6 @@ async def call_ai_api(
         headers["x-api-key"] = api_key
         headers["anthropic-version"] = "2023-06-01"
     
-    # Build request payload
     if provider == "anthropic":
         payload = {
             "model": model,
@@ -163,21 +155,18 @@ async def call_ai_api(
             "max_tokens": 4096,
         }
     
-    # Make API request with timeout
     async with httpx.AsyncClient(timeout=60.0) as client:
         try:
             response = await client.post(url, json=payload, headers=headers)
             response.raise_for_status()
             data = response.json()
             
-            # Extract response based on provider
             if provider == "anthropic":
                 return data["content"][0]["text"]
             else:
                 return data["choices"][0]["message"]["content"]
                 
         except httpx.HTTPStatusError as e:
-            # Don't expose API keys in error messages
             logger.error(f"API error for provider {provider}: {e.response.status_code}")
             raise HTTPException(
                 status_code=500,
@@ -190,7 +179,6 @@ async def call_ai_api(
             logger.error(f"Unexpected error calling {provider}: {str(e)}")
             raise HTTPException(status_code=500, detail="Failed to communicate with AI provider")
 
-# Workflow execution engine
 async def execute_workflow(
     nodes: List[WorkflowNode],
     edges: List[WorkflowEdge],
@@ -198,7 +186,7 @@ async def execute_workflow(
     api_key: str,
     model: str
 ) -> Dict[str, Any]:
-    """Execute workflow nodes in order with cycle detection."""
+    """Execute workflow nodes with cycle detection and validation."""
     
     # Validate workflow structure (includes cycle detection)
     validate_workflow_structure(
@@ -207,16 +195,7 @@ async def execute_workflow(
     )
     
     results = {}
-    node_map = {node.id: node for node in nodes}
     
-    # Build execution order based on edges
-    incoming = {edge.target for edge in edges}
-    trigger_nodes = [node for node in nodes if node.id not in incoming]
-    
-    if not trigger_nodes:
-        trigger_nodes = nodes[:1] if nodes else []
-    
-    # Execute nodes sequentially (can be optimized with async tasks)
     for node in nodes:
         node_id = node.id
         node_type = node.type
@@ -236,9 +215,7 @@ async def execute_workflow(
                 task = node_data.get("task", "Process input")
                 agent_type = node_data.get("agentType", "single")
                 
-                # Get previous results as context
                 context = "\n".join([r["output"] for r in results.values() if "output" in r])
-                
                 prompt = f"Task: {task}\n\nContext: {context}" if context else task
                 system_prompt = f"You are an AI agent in a workflow. Agent type: {agent_type}"
                 
@@ -288,7 +265,7 @@ async def root():
         "name": "AutonomOS API",
         "version": "2.0.0",
         "status": "running",
-        "security": "enabled"
+        "security": "enhanced"
     }
 
 @app.get("/api/health")
@@ -298,52 +275,29 @@ async def health_check():
         "service": "AutonomOS API"
     }
 
-@app.post("/api/auth/login")
-@limiter.limit("5/minute")
-async def login(request: AuthRequest):
-    """Authenticate user and return JWT token."""
-    try:
-        # Store credentials securely and get token
-        credentials = UserCredentials(
-            provider=request.provider,
-            api_key=request.apiKey,
-            model=request.model
-        )
-        
-        token = store_user_credentials(request.user_id, credentials)
-        
-        return {
-            "access_token": token,
-            "token_type": "bearer",
-            "expires_in": 1800
-        }
-    except Exception as e:
-        logger.error(f"Authentication error: {str(e)}")
-        raise HTTPException(status_code=500, detail="Authentication failed")
-
 @app.post("/api/workflows/execute")
 @limiter.limit("10/minute")
 async def execute_workflow_endpoint(
     request: WorkflowExecutionRequest,
-    current_user: TokenData = Depends(get_current_user)
+    x_api_provider: Optional[str] = Header(None),
+    x_api_key: Optional[str] = Header(None),
+    x_model: Optional[str] = Header(None)
 ):
-    """Execute a workflow with JWT authentication."""
+    """Execute a workflow with header-based API credentials."""
     
-    # Get user credentials from secure store
-    credentials = get_user_credentials(current_user.user_id)
-    if not credentials:
+    if not x_api_provider or not x_api_key or not x_model:
         raise HTTPException(
-            status_code=401,
-            detail="User credentials not found. Please login again."
+            status_code=400,
+            detail="Missing required headers: X-API-Provider, X-API-Key, X-Model"
         )
     
     try:
         result = await execute_workflow(
             request.nodes,
             request.edges,
-            credentials.provider,
-            credentials.api_key,
-            credentials.model
+            x_api_provider,
+            x_api_key,
+            x_model
         )
         return result
         
@@ -370,7 +324,7 @@ async def test_api_key(request: TestKeyRequest):
             "message": "API key is valid",
             "response": response[:100]
         }
-    except HTTPException as e:
+    except HTTPException:
         return {
             "success": False,
             "message": "API key validation failed"
