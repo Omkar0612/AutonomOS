@@ -94,7 +94,10 @@ function ApiKeysTab() {
     )
   }
 
-  const { keys = [], addKey, deleteKey, setActiveKey, activeKeyId } = apiKeyContext
+  // ✅ FIX: Use correct property names from context
+  const { apiKeys = [], addApiKey, updateApiKey, deleteApiKey } = apiKeyContext
+  const activeKeyId = apiKeys.find(k => k.isActive)?.id
+  
   const [showAddKey, setShowAddKey] = useState(false)
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({})
   
@@ -116,11 +119,12 @@ function ApiKeysTab() {
       return
     }
 
-    addKey({
-      name: formData.name,
+    // ✅ FIX: Call addApiKey (not addKey)
+    addApiKey({
       provider: formData.provider,
       apiKey: formData.apiKey,
-      model: formData.model
+      model: formData.model,
+      isActive: true // Set as active by default
     })
 
     toast.success('API key added successfully!', { icon: '✅' })
@@ -130,13 +134,14 @@ function ApiKeysTab() {
 
   const handleDeleteKey = (id: string) => {
     if (confirm('Are you sure you want to delete this API key?')) {
-      deleteKey(id)
+      deleteApiKey(id)
       toast.success('API key deleted', { icon: '🗑️' })
     }
   }
 
   const handleSetActive = (id: string) => {
-    setActiveKey(id)
+    // ✅ FIX: Use updateApiKey to set active
+    updateApiKey(id, { isActive: true })
     toast.success('Active API key updated!', { icon: '⭐' })
   }
 
@@ -237,9 +242,9 @@ function ApiKeysTab() {
         )}
 
         {/* API Keys List */}
-        {keys && keys.length > 0 ? (
+        {apiKeys && apiKeys.length > 0 ? (
           <div className="space-y-4">
-            {keys.map((key) => (
+            {apiKeys.map((key) => (
               <div
                 key={key.id}
                 className={`glass-strong rounded-xl p-4 space-y-3 transition-all ${
@@ -249,7 +254,7 @@ function ApiKeysTab() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="font-semibold text-lg">{key.name}</h3>
+                      <h3 className="font-semibold text-lg">{key.provider}</h3>
                       {key.id === activeKeyId && (
                         <span className="badge badge-success">
                           <Zap className="w-3 h-3" />
