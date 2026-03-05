@@ -29,50 +29,6 @@ import { exportWorkflowJSON } from '../utils/export'
 const initialNodes: Node[] = []
 const initialEdges: Edge[] = []
 
-// Demo mode: Generate mock results
-function generateDemoResults(nodes: Node[]): WorkflowExecutionResult {
-  const demoOutputs: any[] = nodes.map((node, index) => ({
-    node_id: node.id,
-    status: 'success',
-    task: node.data.label || `Task ${index + 1}`,
-    output: generateDemoOutput(node.type || 'agent', node.data.label || node.id),
-    execution_time: `${(Math.random() * 3 + 0.5).toFixed(2)}s`
-  }))
-
-  return {
-    execution_id: `demo_${Date.now()}`,
-    status: 'completed',
-    nodes_executed: nodes.length,
-    results: demoOutputs,
-    workflow_id: 'demo_workflow',
-    provider: 'demo',
-    model: 'demo-model',
-    execution_time: `${(nodes.length * 1.5).toFixed(2)}s`
-  }
-}
-
-function generateDemoOutput(nodeType: string, label: string): string {
-  const outputs: Record<string, string[]> = {
-    agent: [
-      `**Market Research Analysis**\n\nKey Findings:\n• Market size: $42.5B (2024)\n• Growth rate: 23.4% CAGR\n• Primary drivers: AI adoption, automation demand\n• Key players: Microsoft, Google, OpenAI\n\nOpportunities:\n1. Enterprise integration solutions\n2. Vertical-specific AI products\n3. Edge AI deployment\n\nRecommendations:\n- Focus on compliance & security\n- Build for scalability\n- Partner with cloud providers`,
-      `**Competitive Analysis Report**\n\nTop Competitors:\n1. **Company A** - Market leader, 35% share\n2. **Company B** - Fast growing, innovative\n3. **Company C** - Enterprise focused\n\nStrengths:\n• Strong brand recognition\n• Extensive partner network\n• Proven track record\n\nWeaknesses:\n• Higher pricing\n• Limited customization\n• Slower innovation cycles\n\nStrategic Recommendations:\n- Differentiate through specialization\n- Compete on customer experience\n- Leverage agile development`,
-      `**Technology Assessment**\n\nCurrent Stack Analysis:\n• Frontend: React, TypeScript\n• Backend: Python, FastAPI\n• Database: PostgreSQL, Redis\n• Infrastructure: AWS, Docker\n\nRecommendations:\n1. Migrate to microservices architecture\n2. Implement GraphQL for data layer\n3. Add real-time capabilities with WebSockets\n4. Enhance monitoring with Datadog\n\nEstimated effort: 6-8 weeks\nROI: 40% efficiency improvement`
-    ],
-    trigger: [
-      `**Workflow Initiated**\n\nTrigger: ${label}\nTimestamp: ${new Date().toLocaleString()}\nStatus: ✅ Success\n\nInitialization complete. Ready to process ${Math.floor(Math.random() * 50 + 10)} items.`
-    ],
-    action: [
-      `**Action Executed**\n\n${label}\n\nResults:\n✅ Processed 147 records\n✅ Updated 89 entries\n✅ Generated 23 reports\n✅ Sent 12 notifications\n\nExecution time: ${(Math.random() * 2 + 0.5).toFixed(2)}s\nStatus: Complete`
-    ],
-    logic: [
-      `**Logic Evaluation**\n\nCondition: ${label}\nResult: TRUE\n\nDecision path: Branch A selected\nConfidence: 94.3%\n\nNext steps:\n1. Route to primary workflow\n2. Execute action nodes\n3. Generate summary report`
-    ]
-  }
-
-  const typeOutputs = outputs[nodeType] || outputs.agent
-  return typeOutputs[Math.floor(Math.random() * typeOutputs.length)]
-}
-
 export default function WorkflowBuilder() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
@@ -168,9 +124,6 @@ export default function WorkflowBuilder() {
       { icon: '🚀' }
     )
 
-    // Wait a bit to simulate execution
-    await new Promise(resolve => setTimeout(resolve, 1500))
-
     try {
       const workflow = {
         nodes: nodes.map((node) => ({
@@ -186,71 +139,52 @@ export default function WorkflowBuilder() {
         })),
       }
 
-      try {
-        const result = await apiService.executeWorkflow(workflow, {
-          provider: activeKey.provider,
-          apiKey: activeKey.apiKey,
-          model: activeKey.model,
-        })
-        
-        setExecutionResult(result)
-        setShowResults(true)
-        
-        // Save to execution history
-        addExecution({
-          workflowName: 'Workflow ' + new Date().toLocaleString(),
-          result,
-          nodes,
-          edges
-        })
-        
-        toast.success(
-          <div>
-            <div className="font-semibold">Workflow executed successfully!</div>
-            <div className="text-xs mt-1">Processed {result.nodes_executed} nodes • Saved to history</div>
-          </div>,
-          { id: toastId, icon: '✅', duration: 4000 }
-        )
-        
-        // Development-only logging
-        if (import.meta.env.DEV) {
-          console.log('Workflow execution result:', result)
-        }
-      } catch (apiError: any) {
-        if (apiError.code === 'ERR_NETWORK' || apiError.message?.includes('Network Error')) {
-          // Generate demo results instead
-          const demoResult = generateDemoResults(nodes)
-          setExecutionResult(demoResult)
-          setShowResults(true)
-          
-          // Save to execution history
-          addExecution({
-            workflowName: 'Demo Workflow ' + new Date().toLocaleString(),
-            result: demoResult,
-            nodes,
-            edges
-          })
-          
-          toast.success(
-            <div>
-              <div className="font-semibold">✨ Demo Mode Executed!</div>
-              <div className="text-xs mt-1">Generated sample outputs • Backend not connected</div>
-            </div>,
-            { id: toastId, icon: '🎭', duration: 6000 }
-          )
-        } else {
-          throw apiError
-        }
+      const result = await apiService.executeWorkflow(workflow, {
+        provider: activeKey.provider,
+        apiKey: activeKey.apiKey,
+        model: activeKey.model,
+      })
+      
+      setExecutionResult(result)
+      setShowResults(true)
+      
+      // Save to execution history
+      addExecution({
+        workflowName: 'Workflow ' + new Date().toLocaleString(),
+        result,
+        nodes,
+        edges
+      })
+      
+      toast.success(
+        <div>
+          <div className="font-semibold">Workflow executed successfully!</div>
+          <div className="text-xs mt-1">Processed {result.nodes_executed} nodes • Saved to history</div>
+        </div>,
+        { id: toastId, icon: '✅', duration: 4000 }
+      )
+      
+      // Development-only logging
+      if (import.meta.env.DEV) {
+        console.log('Workflow execution result:', result)
       }
     } catch (error: any) {
-      const errorMessage = error.response?.data?.detail || error.message || 'Unknown error'
+      let errorMessage = 'Unknown error occurred'
+      
+      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+        errorMessage = 'Cannot connect to backend server. Please make sure the backend is running on http://localhost:8000'
+      } else if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail
+      } else if (error.message) {
+        errorMessage = error.message
+      }
       
       toast.error(
         <div>
-          <div className="font-semibold">Execution error</div>
+          <div className="font-semibold">Execution failed</div>
           <div className="text-xs mt-1">{errorMessage}</div>
         </div>,
-        { id: toastId, icon: '❌', duration: 5000 }
+        { id: toastId, icon: '❌', duration: 6000 }
       )
       
       // Development-only error logging
