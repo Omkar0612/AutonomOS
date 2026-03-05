@@ -1,13 +1,15 @@
+import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import WorkflowBuilder from './components/WorkflowBuilder'
 import Settings from './pages/Settings'
+import ErrorBoundary from './components/ErrorBoundary'
 
 function App() {
   return (
-    <>
+    <ErrorBoundary>
       <Toaster
         position="top-right"
         toastOptions={{
@@ -30,7 +32,7 @@ function App() {
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Layout>
-    </>
+    </ErrorBoundary>
   )
 }
 

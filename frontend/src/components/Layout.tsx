@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import React, { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Home, Workflow, Settings, Zap } from 'lucide-react'
@@ -11,7 +11,7 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation()
 
   const navItems = [
-    { path: '/', icon: Home, label: 'Dashboard' },
+    { path: '/dashboard', icon: Home, label: 'Dashboard' },
     { path: '/workflow', icon: Workflow, label: 'Workflow' },
     { path: '/settings', icon: Settings, label: 'Settings' },
   ]
@@ -21,7 +21,7 @@ export default function Layout({ children }: LayoutProps) {
       {/* Header */}
       <header className="glass-strong border-b border-white/20 px-6 py-4">
         <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <Link to="/" className="flex items-center gap-3 group">
+          <Link to="/dashboard" className="flex items-center gap-3 group">
             <motion.div
               whileHover={{ rotate: 360 }}
               transition={{ duration: 0.5 }}
@@ -39,6 +39,7 @@ export default function Layout({ children }: LayoutProps) {
 
           <nav className="flex items-center gap-2">
             {navItems.map((item) => {
+              const Icon = item.icon
               const isActive = location.pathname === item.path
               return (
                 <Link
@@ -50,7 +51,7 @@ export default function Layout({ children }: LayoutProps) {
                       : 'text-slate-600 dark:text-slate-400 hover:glass hover:text-primary-600'
                   }`}
                 >
-                  <item.icon className="w-5 h-5" />
+                  <Icon className="w-5 h-5" />
                   <span className="font-medium">{item.label}</span>
                 </Link>
               )
