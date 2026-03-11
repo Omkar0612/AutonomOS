@@ -13,7 +13,7 @@
 
 **What if your computer could think, plan, and execute tasks — without you lifting a finger?**
 
-[Demo](https://github.com/Omkar0612/AutonomOS#-demo) • [Quick Start](#-quick-start) • [Architecture](#-architecture) • [Roadmap](#-roadmap) • [Discord](https://github.com/Omkar0612/AutonomOS/discussions)
+[Demo](#-demo) • [Quick Start](#-quick-start) • [Architecture](#-architecture) • [Roadmap](#-roadmap) • [Discord](https://github.com/Omkar0612/AutonomOS/discussions)
 
 </div>
 
@@ -40,6 +40,7 @@ That's what we're building.
 **AutonomOS** is an open-source **AI-native operating system layer** — a visual runtime where you design multi-agent workflows and watch them execute in real time.
 
 Think of it like this:
+
 - **Linux** is an OS for computers
 - **AutonomOS** is an OS for AI agents
 
@@ -49,13 +50,13 @@ You design the pipeline. The agents take over.
 ┌─────────────────────────────────────────────────────────┐
 │                    AutonomOS Runtime                    │
 ├──────────────┬──────────────┬──────────────┬────────────┤
-│  Trigger     │  Agent Pool  │  Execution   │  Output    │
-│  Layer       │  (40+ LLMs)  │  Engine      │  Layer     │
+│   Trigger    │  Agent Pool  │  Execution   │   Output   │
+│    Layer     │  (40+ LLMs)  │   Engine     │   Layer    │
 │              │              │              │            │
-│  Schedule /  │  GPT-4o      │  DAG-based   │  PDF       │
-│  Webhook /   │  Claude 3    │  parallel    │  Notion    │
-│  Manual /    │  Llama 3.3   │  execution   │  Slack     │
-│  API         │  Gemini      │  w/ retries  │  API       │
+│  Schedule /  │    GPT-4o    │  DAG-based   │    PDF     │
+│  Webhook /   │   Claude 3   │   parallel   │   Notion   │
+│  Manual /    │  Llama 3.3   │  execution   │   Slack    │
+│     API      │    Gemini    │  w/ retries  │    API     │
 └──────────────┴──────────────┴──────────────┴────────────┘
 ```
 
@@ -66,21 +67,25 @@ You design the pipeline. The agents take over.
 | Feature | n8n / Zapier | LangChain | AutoGPT | **AutonomOS** |
 |---|---|---|---|---|
 | Visual workflow builder | ✅ | ❌ | ❌ | ✅ |
-| Multi-agent coordination | ❌ | ⚠️ complex | ✅ | ✅ |
-| Real-time execution view | ❌ | ❌ | ❌ | ✅ |
-| Works with FREE LLMs | ❌ | ⚠️ | ❌ | ✅ 40+ models |
+| Multi-agent coordination | ⚠️ limited | ⚠️ complex setup | ✅ | ✅ |
+| Real-time execution view | ⚠️ partial | ❌ | ❌ | ✅ |
+| Works with FREE LLMs | ⚠️ limited | ⚠️ self-configure | ❌ | ✅ 40+ models |
 | Self-hostable, no vendor lock | ⚠️ | ✅ | ✅ | ✅ |
-| One-command Docker deploy | ❌ | ❌ | ❌ | ✅ |
-| Agent memory + state | ❌ | ⚠️ | ✅ | ✅ |
+| One-command Docker deploy | ⚠️ | ❌ | ❌ | ✅ |
+| Agent memory + state | ⚠️ via plugins | ⚠️ manual setup | ✅ | ✅ |
 | Export results (7 formats) | ❌ | ❌ | ❌ | ✅ |
 
-**AutonomOS is the only tool that combines the visual simplicity of n8n with the agentic power of AutoGPT — for free.**
+> **Note:** n8n has grown significantly and supports some agent/memory features via community nodes. The comparison above reflects default out-of-the-box capabilities.
+
+**AutonomOS uniquely combines the visual simplicity of n8n with deep multi-agent orchestration and free-first LLM access — all in one self-hostable package.**
 
 ---
 
 ## Demo
 
 > 🎬 *Building a market research agent that scrapes, analyzes, and exports a report — in 3 minutes, zero code.*
+
+**[📹 Watch Demo Video](https://github.com/Omkar0612/AutonomOS/discussions)** — *(video coming soon — star the repo to be notified)*
 
 ```bash
 # Clone and run in 60 seconds
@@ -91,18 +96,30 @@ make dev
 ```
 
 **Example: Autonomous Research Workflow**
+
 ```
 [Schedule: 9am daily]
-       ↓
+        ↓
 [Agent: Search web for topic X]
-       ↓
+        ↓
 [Agent: Summarize + extract insights]
-       ↓
+        ↓
 [Agent: Write report draft]
-       ↓
+        ↓
 [Action: Export to PDF + send to Slack]
 ```
+
 Runs every morning. Zero human input. Done.
+
+---
+
+## Screenshots
+
+> *UI screenshots and GIF walkthrough coming soon. Run locally to see the visual canvas in action.*
+
+```bash
+git clone https://github.com/Omkar0612/AutonomOS && cd AutonomOS && make dev
+```
 
 ---
 
@@ -130,7 +147,10 @@ autonomos/
 ```
 
 ### Performance (v2.2.0)
-| Metric | Before | Now | Delta |
+
+> ⚠️ **Benchmark context:** These figures are measured on a local machine (8-core CPU, 16GB RAM) running 3 concurrent workflows with Llama 3.3 70B via OpenRouter. Results will vary based on hardware, LLM provider latency, and workflow complexity. See [`benchmarks/`](benchmarks/) for reproducible scripts *(coming soon)*.
+
+| Metric | Before (v2.1.0) | Now (v2.2.0) | Delta |
 |---|---|---|---|
 | API Response | 800-1200ms | 200-400ms | **↓ 65%** |
 | Concurrent Agents | 5 | 80+ | **↑ 16x** |
@@ -144,6 +164,7 @@ Powered by: `uvloop` • `orjson` • `Redis` • Connection pooling
 ## Quick Start
 
 ### 1-minute setup (Docker)
+
 ```bash
 git clone https://github.com/Omkar0612/AutonomOS
 cd AutonomOS
@@ -152,6 +173,7 @@ docker compose up
 ```
 
 ### Manual setup
+
 ```bash
 # Backend
 cd backend
@@ -166,6 +188,7 @@ npm install && npm run dev
 ```
 
 ### Get a FREE API Key (no credit card)
+
 1. Go to [openrouter.ai/keys](https://openrouter.ai/keys)
 2. Create account → copy key
 3. In AutonomOS: Settings → API Key → paste
@@ -178,24 +201,31 @@ npm install && npm run dev
 ## Key Features
 
 ### Visual Workflow Builder
+
 Drag-and-drop canvas built on React Flow. Connect agents, triggers, logic, and actions in any topology — linear chains, parallel branches, feedback loops.
 
 ### Multi-Agent Orchestration
+
 Run multiple AI agents in coordinated pipelines. Each agent has its own context, memory, and task. Agents can pass data, collaborate, or operate in parallel.
 
 ### 40+ LLM Providers (Free Tier First)
+
 OpenRouter integration gives you access to GPT-4o, Claude 3, Llama 3.3 70B, Gemini, Mistral, and 35+ more — many completely free.
 
 ### Real-Time Execution View
+
 Watch your workflow execute node by node. See agent thinking, intermediate outputs, and results live — no black box.
 
 ### Agent Memory
+
 Agents remember previous steps within a workflow run. Cross-workflow memory coming in v3.0.
 
 ### 7 Export Formats
+
 PDF • Word (DOCX) • Excel (XLSX) • PowerPoint (PPTX) • JSON • CSV • Markdown
 
 ### One-Command Docker Deploy
+
 Full-stack deployment in one command. Production-ready out of the box.
 
 ---
@@ -203,20 +233,26 @@ Full-stack deployment in one command. Production-ready out of the box.
 ## Roadmap
 
 ```
-v2.2.0 (Current) ────────────────── ✅ SHIPPED
+v2.2.0 (Current)
+──────────────────
+✅ SHIPPED
   Multi-agent orchestration
   40+ LLM support via OpenRouter
   7-format export engine
   Performance: 4x throughput
 
-v3.0 (Q2 2026) ─────────────────── 🔨 IN PROGRESS
+v3.0 (Q2 2026)
+───────────────────
+🔨 IN PROGRESS
   [ ] Persistent agent memory across runs
   [ ] Agent Marketplace (share/sell workflows)
   [ ] Voice trigger support
   [ ] Browser-use agent (web automation)
   [ ] Mobile companion app
 
-v4.0 (Q4 2026) ─────────────────── 🧠 PLANNED
+v4.0 (Q4 2026)
+───────────────────
+🧠 PLANNED
   [ ] AutonomOS Kernel — OS-level agent runtime
   [ ] Agent-to-agent communication protocol
   [ ] Autonomous self-improvement loop
@@ -252,11 +288,13 @@ git checkout -b feat/your-feature
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. Check [open issues](https://github.com/Omkar0612/AutonomOS/issues) for good first tasks.
 
 **High-priority contributions:**
+
 - New node types (database, email, browser-use)
 - New LLM provider integrations
 - Workflow templates for the marketplace
-- Performance benchmarks
+- Performance benchmarks (reproducible scripts in `benchmarks/`)
 - Documentation improvements
+- UI screenshots and GIF demos
 
 ---
 
@@ -276,10 +314,6 @@ Free forever. Build what you want. Own what you build.
 
 ---
 
-<div align="center">
-
 **Built by one person. Powered by open-source. Designed to replace entire teams.**
 
 *AutonomOS — because the future of work is agents, not apps.*
-
-</div>
