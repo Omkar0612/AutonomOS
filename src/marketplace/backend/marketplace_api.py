@@ -103,7 +103,7 @@ class SkillResponse(BaseModel):
 class ReviewCreate(BaseModel):
     skill_name: str
     user_name: str
-    rating: int  # 1-5
+    rating: int
     comment: str
 
 

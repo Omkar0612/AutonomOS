@@ -1,13 +1,14 @@
 """
 Council Multi-Agent Pattern (Deliberative Decision-Making)
 """
+
 import asyncio
 import random
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from ..core.agent import Agent  # TaskResult removed - not referenced in this module
+from ..core.agent import Agent
 
 
 class VoteType(Enum):
@@ -155,10 +156,10 @@ class CouncilSystem:
         """Individual agent casts vote with reasoning"""
         await agent.execute_task(task)
 
-        # Simulate vote outcome for testing; replace with LLM response parsing in production
-        # noqa comments below: random is used for simulation, not cryptographic purposes
-        vote_type = random.choice([VoteType.APPROVE, VoteType.APPROVE, VoteType.REJECT])  # noqa: S311
-        confidence = 0.6 + random.random() * 0.3  # noqa: S311
+        # Demo/testing simulation only - random is not used for security purposes
+        # In production, parse actual LLM response for vote and confidence
+        vote_type = random.choice([VoteType.APPROVE, VoteType.APPROVE, VoteType.REJECT])
+        confidence = 0.6 + random.random() * 0.3
 
         return Vote(
             agent_id=agent.id,
@@ -171,10 +172,12 @@ class CouncilSystem:
 
     def _synthesize_decision(
         self,
-        question: str,  # noqa: ARG002
+        question: str,
         votes: list[Vote],
     ) -> CouncilDecision:
         """Synthesize final decision from all votes"""
+        _ = question  # Unused in demo - would be used for LLM synthesis in production
+
         vote_counts: dict[str, int] = {
             VoteType.APPROVE.value: 0,
             VoteType.REJECT.value: 0,

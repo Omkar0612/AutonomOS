@@ -1,57 +1,90 @@
-# Makefile for AutonomOS
+# AutonomOS Makefile
+# Quick commands for common tasks
 
-.PHONY: help install test lint format clean docker run
+.PHONY: help install install-optimized dev test lint format clean benchmark docker-build docker-up
 
 help:
-	@echo "Available commands:"
-	@echo "  make install    - Install dependencies"
-	@echo "  make test       - Run tests"
-	@echo "  make lint       - Run linters"
-	@echo "  make format     - Format code"
-	@echo "  make clean      - Clean cache files"
-	@echo "  make docker     - Build Docker image"
-	@echo "  make run        - Run application"
+	@echo "AutonomOS Development Commands:"
+	@echo ""
+	@echo "Setup:"
+	@echo "  make install           - Install dependencies (minimal)"
+	@echo "  make install-optimized - Install with performance optimizations"
+	@echo "  make dev              - Start development servers"
+	@echo ""
+	@echo "Testing & Quality:"
+	@echo "  make test             - Run tests"
+	@echo "  make lint             - Run linters"
+	@echo "  make format           - Format code"
+	@echo "  make benchmark        - Run performance benchmarks"
+	@echo ""
+	@echo "Docker:"
+	@echo "  make docker-build     - Build Docker image"
+	@echo "  make docker-up        - Start with Docker Compose"
+	@echo ""
+	@echo "Cleanup:"
+	@echo "  make clean            - Remove generated files"
 
 install:
-	pip install -r requirements.txt
-	pip install -r requirements-dev.txt
-	pre-commit install
+	@echo "Installing minimal dependencies..."
+	cd backend && pip install -r requirements-minimal.txt
+	cd frontend && npm install
+
+install-optimized:
+	@echo "Installing optimized dependencies..."
+	cd backend && pip install -r requirements-optimized.txt
+	cd frontend && npm install
+	@echo ""
+	@echo "✅ Optimization packages installed!"
+	@echo "Next: Read OPTIMIZATION_QUICKSTART.md"
+
+dev:
+	@echo "Starting development servers..."
+	@echo "Backend: http://localhost:8000"
+	@echo "Frontend: http://localhost:5173"
+	@echo ""
+	@make -j2 dev-backend dev-frontend
+
+dev-backend:
+	cd backend && python main.py
+
+dev-frontend:
+	cd frontend && npm run dev
 
 test:
-	pytest tests/ -v --cov=src --cov-report=html
-
-test-fast:
-	pytest tests/ -n auto
+	@echo "Running tests..."
+	cd backend && pytest
+	cd frontend && npm test
 
 lint:
-	ruff check src/ tests/
-	mypy src/
-	black --check src/ tests/
+	@echo "Running linters..."
+	cd backend && ruff check .
+	cd frontend && npm run lint
 
 format:
-	black src/ tests/
-	ruff check --fix src/ tests/
-	isort src/ tests/
-
-security:
-	pip-audit
-	safety check
-	bandit -r src/
-
-clean:
-	find . -type d -name "__pycache__" -exec rm -rf {} +
-	find . -type f -name "*.pyc" -delete
-	find . -type f -name "*.pyo" -delete
-	rm -rf .pytest_cache .coverage htmlcov/ .mypy_cache .ruff_cache
-
-docker:
-	docker build -t autonomos:latest -f Dockerfile.optimized .
-
-docker-run:
-	docker-compose up -d
-
-run:
-	python main.py
+	@echo "Formatting code..."
+	cd backend && black .
+	cd frontend && npm run format
 
 benchmark:
-	py-spy record -o profile.svg -- python main.py
+	@echo "Running performance benchmarks..."
+	cd backend && python benchmark.py
+
+clean:
+	@echo "Cleaning up..."
+	find . -type d -name "__pycache__" -exec rm -rf {} +
+	find . -type f -name "*.pyc" -delete
+	cd frontend && rm -rf dist node_modules/.vite
+
+docker-build:
+	@echo "Building Docker image..."
+	docker build -t autonomos:latest .
+
+docker-up:
+	@echo "Starting with Docker Compose..."
+	docker-compose up -d
+	@echo "Backend: http://localhost:8000"
+	@echo "Frontend: http://localhost:3000"
+
+metrics:
+	@echo "Fetching performance metrics..."
+	curl -s http://localhost:8000/api/metrics | python -m json.tool

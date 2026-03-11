@@ -40,6 +40,7 @@ target-version = "py310"
 # Sync with ruff.toml - removed 'I' (isort) to match standalone config
 select = ["E", "F", "N", "UP", "B", "C4", "SIM", "RUF"]
 ignore = ["E501", "B008", "B904"]
+
 [tool.black]
 line-length = 100
 target-version = ['py310']
@@ -56,6 +57,7 @@ namespace_packages = true
 [[tool.mypy.overrides]]
 module = "multi_agent.*"
 ignore_errors = false
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]

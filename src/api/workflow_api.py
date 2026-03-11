@@ -87,14 +87,15 @@ class WorkflowExecutor:
 
                 elif pattern == "swarm":
                     swarm = SwarmSystem(agents=agents)
-                    result = swarm.execute()  # SwarmSystem is synchronous in this demo
+                    result = swarm.execute()
 
                 elif pattern == "council":
                     council = CouncilSystem(name="WorkflowCouncil", agents=agents)
                     result = await council.decide("Evaluate workflow decision")
 
                 else:
-                    raise HTTPException(status_code=400, detail=f"Unknown pattern: {pattern}")
+                    msg = f"Unknown pattern: {pattern}"
+                    raise HTTPException(status_code=400, detail=msg)
 
                 return {"status": "completed", "result": result, "context": context}
 

@@ -1,0 +1,12 @@
+# AutonomOS Backend - Minimal Installation
+# For basic functionality without optimization packages
+
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
+python-dotenv>=1.0.0
+httpx>=0.25.0
+slowapi>=0.1.9
+bleach>=6.1.0
+croniter>=2.0.1
+watchdog>=3.0.0
