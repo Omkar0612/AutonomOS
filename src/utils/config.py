@@ -44,7 +44,7 @@ def load_config() -> dict[str, Any]:
         "ENABLE_SANDBOX": os.getenv("ENABLE_SANDBOX", "true").lower() == "true",
         "MAX_EXECUTION_TIME": int(os.getenv("MAX_EXECUTION_TIME", "300")),
         # API Configuration
-        "API_HOST": os.getenv("API_HOST", "0.0.0.0"),
+        "API_HOST": os.getenv("API_HOST", "0.0.0.0"),  # noqa: S104
         "API_PORT": int(os.getenv("API_PORT", "8080")),
     }
 
