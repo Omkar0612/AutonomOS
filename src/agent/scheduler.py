@@ -1,6 +1,4 @@
 """TaskScheduler - Cron-based task scheduling"""
-
-import asyncio
 from typing import Any
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -22,7 +20,6 @@ class TaskScheduler:
         if self.running:
             logger.warning("Scheduler already running")
             return
-
         try:
             self.scheduler.start()
             self.running = True
@@ -35,7 +32,6 @@ class TaskScheduler:
         """Stop the scheduler"""
         if not self.running:
             return
-
         try:
             self.scheduler.shutdown(wait=True)
             self.running = False
@@ -61,9 +57,7 @@ class TaskScheduler:
             cron_parts = cron.split()
             if len(cron_parts) != 5:
                 raise ValueError("Cron expression must have 5 parts: min hour day month dow")
-
             minute, hour, day, month, day_of_week = cron_parts
-
             job = self.scheduler.add_job(
                 func,
                 trigger="cron",
@@ -77,10 +71,8 @@ class TaskScheduler:
                 id=name,
                 replace_existing=True,
             )
-
             self.tasks[name] = {"job": job, "cron": cron, "func": func.__name__}
             logger.info(f"Task '{name}' scheduled with cron: {cron}")
-
         except Exception as e:
             logger.error(f"Failed to add task '{name}': {e}")
             raise
@@ -102,9 +94,6 @@ class TaskScheduler:
         """Execute a task immediately"""
         if name not in self.tasks:
             raise ValueError(f"Task '{name}' not found")
-
-        task_info = self.tasks[name]
         logger.info(f"Executing task '{name}' immediately")
-
         # TODO: Execute task through agent brain
         return {"status": "executed", "task": name}
