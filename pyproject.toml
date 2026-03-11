@@ -6,7 +6,6 @@ authors = [{name = "Omkar", email = "61723019+Omkar0612@users.noreply.github.com
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
-
 keywords = ["ai", "agents", "automation", "multi-agent", "llm"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -16,7 +15,6 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
-
 dependencies = [
     "fastapi>=0.109.0",
     "uvicorn[standard]>=0.27.0",
@@ -24,7 +22,6 @@ dependencies = [
     "openai>=1.10.0",
     "numpy>=1.26.3",
 ]
-
 [project.optional-dependencies]
 dev = [
     "pytest>=7.4.4",
@@ -34,29 +31,31 @@ dev = [
     "mypy>=1.8.0",
     "black>=23.12.0",
 ]
-
 [build-system]
 requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
-
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-
-[tool.ruff.lint]
-select = ["E", "F", "I", "N", "UP", "S", "B", "A", "C4", "T20"]
-ignore = ["E501"]
-
+# Sync with ruff.toml - removed 'I' (isort) to match standalone config
+select = ["E", "F", "N", "UP", "B", "C4", "SIM", "RUF"]
+ignore = ["E501", "B008", "B904"]
 [tool.black]
 line-length = 100
 target-version = ['py310']
-
 [tool.mypy]
 python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
-
+# Fix module name conflicts
+explicit_package_bases = true
+mypy_path = "$MYPY_CONFIG_FILE_DIR"
+namespace_packages = true
+# Ignore duplicate module errors
+[[tool.mypy.overrides]]
+module = "multi_agent.*"
+ignore_errors = false
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
